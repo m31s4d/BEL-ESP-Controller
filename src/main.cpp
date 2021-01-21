@@ -1,13 +1,14 @@
 /**
  This code was written/hacked together by Swen Schreiter and is the basis for the multifunctional environmental sensing device called S.E.E.D (Small Electronic Environmental Device).
-Project details can be found on GitHub (https://github.com/m31s4d/Project-S.E.E.D) or at the project blog (TBD).
+Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in the research environment.
+
  */
 
 // Include the libraries we need
 //#include <Arduino.h>
 #include <Wire.h>    //Adds library for the I2C bus on D1 (SCL) and D2(SCD) (both can be changed on the ESP8266 to the deisred GPIO pins)
 //#include <SPI.h>
-#include <OneWire.h>           //Adds library needed to
+#include <OneWire.h>           //Adds library needed to initialize and use the 1-Wire protocoll for DS18B20 sensors
 #include <DallasTemperature.h> //Adds the Dallas Temp library to use DS18B20 with the Wemos
 #include <Adafruit_BME280.h>   //Adds library for the BME280 (Bosch) environmental sensor
 #include <Adafruit_Sensor.h>   //Adds library for all Adafruit sensors to make them usable
@@ -15,11 +16,11 @@ Project details can be found on GitHub (https://github.com/m31s4d/Project-S.E.E.
 #include "PubSubClient.h"      // Allows us to connect to, and publish to the MQTT broker
 
 //Initialization of the OneWire Bus und the temp sensor
-const int oneWireBus = D3;                 // GPIO where the DS18B20 is connected to
-int numDevices;                            // Number of temperature devices found
+const int oneWireBus = D3;                 // GPIO where the DS18B20 is connected to D3
+int numDevices;                            // Number of temperature devices found (will be used to get and publish all readings)
 OneWire oneWire(oneWireBus);               // Setup a oneWire instance to communicate with any OneWire devices
 DallasTemperature dallassensors(&oneWire); // Pass our oneWire reference to Dallas Temperature sensor
-DeviceAddress tempDeviceAddress;           // We'll use this variable to store a found device address
+DeviceAddress tempDeviceAddress;           // We'll use this variable to store a found device address for the DS18B20
 
 //Initialization of all environmental variables as global to share them between functions
 float bme280_temp = 0;     //Sets the variable temp to the temp measure of the BME280
@@ -32,15 +33,20 @@ float bme280_altitude = 0; //Sets the altitutde variable bme_altitutde to zero
 float bme280_altitude2 = 0; //Sets the altitutde variable bme_altitutde to zero
 
 //Adafruit_BMP280 bmp; // use I2C interface
-Adafruit_BME280 bme;                                     // use I2C interface
-Adafruit_BME280 bme2;                                     // use I2C interface
+Adafruit_BME280 bme;                                     // Create BME280 instance for the first sensor
+Adafruit_BME280 bme2;                                     // Create BME280 Instance for the second sensor
 Adafruit_Sensor *bme_temp = bme.getTemperatureSensor();  //Gets temperature value from the sensor
 Adafruit_Sensor *bme_pressure = bme.getPressureSensor(); //Gets pressure value from sensor
 Adafruit_Sensor *bme_humidity = bme.getHumiditySensor(); //Gets humidity value from sensor/ initializes it
+Adafruit_Sensor *bme_temp2 = bme2.getTemperatureSensor();  //Gets temperature value from the sensor 2
+Adafruit_Sensor *bme_pressure2 = bme2.getPressureSensor(); //Gets pressure value from sensor 2
+Adafruit_Sensor *bme_humidity2 = bme2.getHumiditySensor(); //Gets humidity value from sensor2 / initializes it
 
-// MQTT 1
+
+// MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
 const char *mqtt_server_1 = "192.168.2.105";                //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server_2 = "XXX.XXX.XXX.XXX";          //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 const char *temp_bme280_topic_1 = "aeroponic/growtent1/temperatur/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *temp_bme280_topic_2 = "aeroponic/growtent1/temperatur/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *humidity_bme280_topic_1 = "aeroponic/growtent1/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
@@ -49,18 +55,11 @@ const char *pressure_bme280_topic_1 = "aeroponic/growtent1/pressure/bme280/senso
 const char *pressure_bme280_topic_2 = "aeroponic/growtent1/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *temp_ds18b20_topic_1 = "aeroponic/growtent1/temperatur/d18b20/sensor1"; //Adds MQTT topic for the dallas sens
 const char *temp_ds18b20_topic_2 = "aeroponic/growtent1/temperatur/d18b20/sensor2"; //Adds MQTT topic for the dallas sens
-const char *mqtt_connection_topic_1 = "aeroponic/growtent1/connection/sens<or1";
+const char *mqtt_connection_topic = "aeroponic/growtent1/connection/sensor1"; //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 //const char* mqtt_username = "cdavid"; //if MQTT server needs credentials they need to be added in the next two lines
 //const char* mqtt_password = "cdavid";
-// MQTT 2
-// These lines initialize the variables for PubSub to connect to the MQTT Broker 2 of the Aero-Table
-const char *mqtt_server_2 = "XXX.XXX.XXX.XXX";          //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-const char *light_topic_2 = "home/bedroom/lightsensor"; //This defines a topic for our light measurment and where it should be published via MQTT (Channel)
-const char *temp_topic_2 = "home/bedroom/tempsensor";   //This defines a topic for the temperature measurement of the BME280 at the MQTT broker
-const char *mqtt_connection_topic_2 = "aero1/growtent/connection/sensor2";
-//const char* mqtt_username = "cdavid"; //if MQTT server needs credentials they need to be added in the next two lines
-//const char* mqtt_password = "cdavid";
-const char *clientID = "ESP-Table_1-1"; // The client id identifies the ESP8266 device. Think of it a bit like a hostname (Or just a name, like Greg).
+
+const char *clientID = "ESP-Table_1-1"; // The client id identifies the ESP8266 device. In this experiment we will use ESP-Table_X-Y (X = Table No, Y = Microcontroller No) Think of it a bit like a hostname (Or just a name, like Greg).
 unsigned long noLoop = 0; //Needed for the deepsleep loop function
 unsigned long lastLoop1 = 0; //Needed for the millis() loop function
 unsigned long lastLoop2 = 0; //Needed for the millis() loop function
@@ -72,7 +71,6 @@ void connect_wifi_1() {
   // WiFi connection settings
   const char *ssid = " ";                      //This line needs to be populated by the SSID of the wifi network we want to connect to
   const char *wifi_password = " "; //This line is populated by the password of the wifi network
-
   delay(10);
   // We start by connecting to a WiFi network
   Serial.println();
@@ -98,8 +96,8 @@ void connect_wifi_1() {
 }
 void connect_wifi_2() {
     //Defines the wifi connection settings of the second broker
-  const char *ssid = "WLAN-173564";
-  const char *wifi_password = "40568512259452661617";
+  const char *ssid = " ";
+  const char *wifi_password = " ";
 
   delay(10);
   // We start by connecting to a WiFi network
@@ -142,12 +140,12 @@ void connect_MQTT_1()
     //Following are test topics
     //client.subscribe(tempsensor1_topic);
     delay(100);
-    //client.publish(mqtt_connection_topic_1, "on");
   }
   else
   {
     Serial.println("Connection to MQTT Broker failed...");
   }
+  client.publish(mqtt_connection_topic, "on");
 }
 void connect_MQTT_2()
 { 
@@ -170,12 +168,12 @@ void connect_MQTT_2()
     //Following are test topics
     //client.subscribe(tempsensor1_topic);
     delay(100);
-    client.publish(mqtt_connection_topic_2, "on");
   }
   else
   {
     Serial.println("Connection to MQTT Broker failed...");
   }
+  client.publish(mqtt_connection_topic, "on");
 }
 /*void measure_distance_ultrasonic(){
 int trigger=D7;                        // Der Trigger Pin
@@ -234,11 +232,13 @@ void measure_humidity()
   sensors_event_t /*temp_event, pressure_event,*/ humidity_event; //Initialization of the sensor events to use them later
   bme_humidity->getEvent(&humidity_event);
   bme280_humidity = bme.readHumidity(); //Sets variable bme_humidity to humidity measure of BME280
+  bme280_humidity2 = bme2.readHumidity(); //Sets variable bme_humidity to humidity measure of BME280
   String humi = String((float)bme280_humidity);       //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
+  String humi2 = String((float)bme280_humidity2);       //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //MQTT can only transmit strings
-  if (client.publish(humidity_bme280_topic_1, String(humi).c_str()) && client.publish(humidity_bme280_topic_2, String(humi).c_str()))
+  if (client.publish(humidity_bme280_topic_1, String(humi).c_str()) && client.publish(humidity_bme280_topic_2, String(humi2).c_str()))
   {                                  // PUBLISH to the MQTT Broker (topic was defined at the beginning)
-    Serial.println(humi + " sent to Table and Server!"); //To allow debugging a serial output is written if the measurment was published succesfully.
+    Serial.println(humi +  humi2 + " sent to Server!"); //To allow debugging a serial output is written if the measurment was published succesfully.
   }
   // Again, client.publish will return a boolean value depending on whether it succeded or not.
   // If the message failed to send, we will try again, as the connection may have broken.
@@ -249,7 +249,7 @@ void measure_humidity()
     client.connect(clientID);
     delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
     client.publish(humidity_bme280_topic_1, String(humi).c_str());
-    client.publish(humidity_bme280_topic_2, String(humi).c_str());
+    client.publish(humidity_bme280_topic_2, String(humi2).c_str());
   }
 }
 void measure_pressure()
@@ -258,12 +258,14 @@ void measure_pressure()
   //bme_temp->getEvent(&temp_event);
   bme_pressure->getEvent(&pressure_event);
   bme280_pressure = bme.readPressure(); //Sets variable bme_pressure to pressure measire of BME280
+  bme280_pressure2 = bme2.readPressure(); //Sets variable bme_pressure to pressure measire of BME280
   //bme280_pressure = pressure_event.pressure;     //Sets variable bme_pressure to pressure measire of BME280
   String press = String((float)bme280_pressure); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
+  String press2 = String((float)bme280_pressure2); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //MQTT can only transmit strings
-  if (client.publish(pressure_bme280_topic_1, String(press).c_str()) && client.publish(pressure_bme280_topic_2, String(press).c_str()))
+  if (client.publish(pressure_bme280_topic_1, String(press).c_str()) && client.publish(pressure_bme280_topic_2, String(press2).c_str()))
   {                                   // PUBLISH to the MQTT Broker (topic was defined at the beginning)
-    Serial.println(press + " sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
+    Serial.println(press + press2 + " sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
   }
   // Again, client.publish will return a boolean value depending on whether it succeded or not.
   // If the message failed to send, we will try again, as the connection may have broken.
@@ -274,7 +276,7 @@ void measure_pressure()
     client.connect(clientID);
     delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
     client.publish(pressure_bme280_topic_1, String(press).c_str());
-    //client.publish(pressure_bme280_topic_2, String(press).c_str());
+    client.publish(pressure_bme280_topic_2, String(press2).c_str());
   }
 }
 /*void callback(char *topic, byte *payload, unsigned int length)
@@ -376,7 +378,7 @@ void setup()
   //client.setCallback(callback);                     //Tells the pubsubclient which function to use in case of a callback
   if (!bme.begin(0x76) && !bme2.begin(0x77))
   { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
-    Serial.println(F("Could not find a valid BME280 sensor, check wiring!"));
+    Serial.println(F("Could not find the BME280 sensors, check wiring!"));
     //while (1)
     //delay(10);
   }
