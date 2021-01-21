@@ -267,7 +267,7 @@ void measure_pressure()
     client.connect(clientID);
     delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
     client.publish(pressure_bme280_topic_1, String(press).c_str());
-    client.publish(pressure_bme280_topic_2, String(press).c_str());
+    //client.publish(pressure_bme280_topic_2, String(press).c_str());
   }
 }
 /*void callback(char *topic, byte *payload, unsigned int length)
