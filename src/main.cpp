@@ -390,8 +390,8 @@ void loop()
   unsigned long now = millis();
   if (now - lastLoop1 > 5000) {
     lastLoop1 = now;
-    connect_wifi_1();
-    connect_MQTT_1();
+    //connect_wifi_1();
+    //connect_MQTT_1();
     delay(50);
     measure_temp();
     delay(50);
