@@ -388,7 +388,7 @@ void loop()
 { //This function will continously be executed; everything which needs to be done recurringly is set here.
   client.loop();
   unsigned long now = millis();
-  if (now - lastLoop1 > 2000) {
+  if (now - lastLoop1 > 5000) {
     lastLoop1 = now;
     connect_wifi_1();
     connect_MQTT_1();
@@ -407,7 +407,7 @@ void loop()
     Serial.print("Disconnecting from WiFi");
     WiFi.disconnect(); // Disconnects the wifi safely
     }
-  if(now - lastLoop2 > 2000){
+  if(now - lastLoop2 > 5000){
      lastLoop2 = now;
      Serial.print("Skipping Connecton 2 for now");
     //connect_wifi_2();
