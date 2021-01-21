@@ -23,10 +23,13 @@ DeviceAddress tempDeviceAddress;           // We'll use this variable to store a
 
 //Initialization of all environmental variables as global to share them between functions
 float bme280_temp = 0;     //Sets the variable temp to the temp measure of the BME280
+float bme280_temp2 = 0;     //Sets the variable temp to the temp measure of the BME280
 float bme280_humidity = 0; //Sets variable bme_humidity to humidity measure of BME280
+float bme280_humidity2 = 0; //Sets variable bme_humidity to humidity measure of BME280
 float bme280_pressure = 0; //Sets variable bme_pressure to pressure measire of BME280
+float bme280_pressure2 = 0; //Sets variable bme_pressure to pressure measire of BME280
 float bme280_altitude = 0; //Sets the altitutde variable bme_altitutde to zero
-float sht1750_lux = 0;     //Sets the value lux to the measured value of the light sensor.
+float bme280_altitude2 = 0; //Sets the altitutde variable bme_altitutde to zero
 
 //Adafruit_BMP280 bmp; // use I2C interface
 Adafruit_BME280 bme;                                     // use I2C interface
@@ -199,28 +202,31 @@ void measure_temp()
   //bme_pressure->getEvent(&pressure_event);
   //bme_humidity->getEvent(&humidity_event);
   bme280_temp = bme.readTemperature(); //Sets the variable temp to the temp measure of the BME280
+  bme280_temp2 = bme2.readTemperature(); //Sets the variable temp to the temp measure of the BME280
   //bme280_humidity = humidity_event.relative_humidity; //Sets variable bme_humidity to humidity measure of BME280
   //bme280_pressure = pressure_event.pressure; //Sets variable bme_pressure to pressure measire of BME280
   //float bme280_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
   String temp = String((float)bme280_temp); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
+  String temp2 = String((float)bme280_temp2); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //String humi=String((float)bme280_humidity); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //String press=String((float)bme280_pressure); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //String alti=String((float)bme280_altitude); //Important to change the value of the variable to a string
   //MQTT can only transmit strings
-  if (client.publish(temp_bme280_topic_1, String(temp).c_str()) && client.publish(temp_bme280_topic_2, String(temp).c_str()))
+  if (client.publish(temp_bme280_topic_1, String(temp).c_str()) && client.publish(temp_bme280_topic_2, String(temp2).c_str()))
   {                                  // PUBLISH to the MQTT Broker (topic was defined at the beginning)
-    Serial.print(temp + " sent to Table and Server!"); //To allow debugging a serial output is written if the measurment was published succesfully.
+    Serial.print(temp + " sent to Broker!"); //To allow debugging a serial output is written if the measurment was published succesfully.
   }
   // Again, client.publish will return a boolean value depending on whether it succeded or not.
   // If the message failed to send, we will try again, as the connection may have broken.
   else
   {
     Serial.println(temp);
+    Serial.println(temp2);
     Serial.print(" failed to send. Reconnecting to MQTT Broker and trying again");
     client.connect(clientID);
     delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
     client.publish(temp_bme280_topic_1, String(temp).c_str());
-    client.publish(temp_bme280_topic_2, String(temp).c_str());
+    client.publish(temp_bme280_topic_2, String(temp2).c_str());
   }
 }
 void measure_humidity()
