@@ -69,8 +69,8 @@ PubSubClient client(mqtt_server_1, 1883, wifiClient); // 1883 is the listener po
 
 void connect_wifi_1() {
   // WiFi connection settings
-  const char *ssid = " ";                      //This line needs to be populated by the SSID of the wifi network we want to connect to
-  const char *wifi_password = " "; //This line is populated by the password of the wifi network
+  const char *ssid = "Hood Lan";                      //This line needs to be populated by the SSID of the wifi network we want to connect to
+  const char *wifi_password = "Ja17081994Yp08091992"; //This line is populated by the password of the wifi network
   delay(10);
   // We start by connecting to a WiFi network
   Serial.println();
@@ -401,14 +401,17 @@ void loop()
     delay(50);
     read_dallas();
     delay(100); //Short delay to finish up all calculations before going to DeepSleep
+    Serial.print("Disconnecting from MQTT Broker");
     client.disconnect(); // disconnect from the MQTT broker
     delay(100); //Short delay to finish up all calculations before going to DeepSleep
+    Serial.print("Disconnecting from WiFi");
     WiFi.disconnect(); // Disconnects the wifi safely
     }
   if(now - lastLoop2 > 2000){
      lastLoop2 = now;
-    connect_wifi_2();
-    connect_MQTT_2();
+     Serial.print("Skipping Connecton 2 for now");
+    //connect_wifi_2();
+    //connect_MQTT_2();
     delay(50);
     measure_temp();
     delay(50);
