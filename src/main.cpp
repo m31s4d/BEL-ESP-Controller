@@ -30,6 +30,7 @@ float sht1750_lux = 0;     //Sets the value lux to the measured value of the lig
 
 //Adafruit_BMP280 bmp; // use I2C interface
 Adafruit_BME280 bme;                                     // use I2C interface
+Adafruit_BME280 bme2;                                     // use I2C interface
 Adafruit_Sensor *bme_temp = bme.getTemperatureSensor();  //Gets temperature value from the sensor
 Adafruit_Sensor *bme_pressure = bme.getPressureSensor(); //Gets pressure value from sensor
 Adafruit_Sensor *bme_humidity = bme.getHumiditySensor(); //Gets humidity value from sensor/ initializes it
@@ -318,9 +319,26 @@ void read_dallas()
       String temp_dallas = String((float)tempC); //Important to change the value of the variable to a string
       Serial.print("Temp C: ");
       Serial.print(tempC);
-      if (i==1)
+      if (i==0 && client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()))
       {                                         
+        //client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()); // PUBLISH to the MQTT Broker (topic was defined at the beginning)
+        //client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str());
+        Serial.println(temp_dallas + " sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
+      }
+      // Again, client.publish will return a boolean value depending on whether it succeded or not.
+      // If the message failed to send, we will try again, as the connection may have broken.
+      else
+      {
+        Serial.println(temp_dallas);
+        Serial.println(" failed to send. Reconnecting to MQTT Broker and trying again");
+        client.connect(clientID);
+        delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
         client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()); // PUBLISH to the MQTT Broker (topic was defined at the beginning)
+      }
+      if (i==1 && client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str()))
+      {                                         
+        //client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()); // PUBLISH to the MQTT Broker (topic was defined at the beginning)
+        //client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str());
         Serial.println(temp_dallas + " sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
       }
       // Again, client.publish will return a boolean value depending on whether it succeded or not.
@@ -350,7 +368,7 @@ void setup()
   dallassensors.begin();                            //Activates the DS18b20 sensors on the one wire
   numDevices = dallassensors.getDeviceCount();      //Stores the DS18BB20 addresses on the ONEWIRE
   //client.setCallback(callback);                     //Tells the pubsubclient which function to use in case of a callback
-  if (!bme.begin(0x76) && !bme.begin(0x77))
+  if (!bme.begin(0x76) && !bme2.begin(0x77))
   { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
     Serial.println(F("Could not find a valid BME280 sensor, check wiring!"));
     //while (1)
