@@ -376,13 +376,18 @@ void setup()
   dallassensors.begin();                            //Activates the DS18b20 sensors on the one wire
   numDevices = dallassensors.getDeviceCount();      //Stores the DS18BB20 addresses on the ONEWIRE
   //client.setCallback(callback);                     //Tells the pubsubclient which function to use in case of a callback
-  if (!bme.begin(0x76) && !bme2.begin(0x77))
+  if (!bme.begin(0x76))
   { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
     Serial.println(F("Could not find the BME280 sensors, check wiring!"));
     //while (1)
     //delay(10);
   }
- 
+   if (!bme2.begin(0x77))
+  { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
+    Serial.println(F("Could not find the BME280 sensors, check wiring!"));
+    //while (1)
+    //delay(10);
+  }
 }
 void loop()
 { //This function will continously be executed; everything which needs to be done recurringly is set here.
