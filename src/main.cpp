@@ -55,7 +55,7 @@ const char *pressure_bme280_topic_1 = "aeroponic/growtent1/pressure/bme280/senso
 const char *pressure_bme280_topic_2 = "aeroponic/growtent1/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *temp_ds18b20_topic_1 = "aeroponic/growtent1/temperatur/d18b20/sensor1"; //Adds MQTT topic for the dallas sens
 const char *temp_ds18b20_topic_2 = "aeroponic/growtent1/temperatur/d18b20/sensor2"; //Adds MQTT topic for the dallas sens
-const char *mqtt_connection_topic = "aeroponic/growtent1/connection/sensor1"; //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
+const char *mqtt_connection_topic = "aeroponic/growtent1/connection/table1"; //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 //const char* mqtt_username = "cdavid"; //if MQTT server needs credentials they need to be added in the next two lines
 //const char* mqtt_password = "cdavid";
 
@@ -353,7 +353,7 @@ void read_dallas()
       // If the message failed to send, we will try again, as the connection may have broken.
       else
       {
-        Serial.println(temp_dallas);
+        Serial.print(temp_dallas);
         Serial.println(" failed to send. Reconnecting to MQTT Broker and trying again");
         client.connect(clientID);
         delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
@@ -378,13 +378,13 @@ void setup()
   //client.setCallback(callback);                     //Tells the pubsubclient which function to use in case of a callback
   if (!bme.begin(0x76))
   { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
-    Serial.println(F("Could not find the BME280 sensors, check wiring!"));
+    Serial.println(F("Could not find first BME280 sensor, check wiring!"));
     //while (1)
     //delay(10);
   }
    if (!bme2.begin(0x77))
   { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
-    Serial.println(F("Could not find the BME280 sensors, check wiring!"));
+    Serial.println(F("Could not find second BME280 sensor, check wiring!"));
     //while (1)
     //delay(10);
   }
