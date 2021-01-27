@@ -24,7 +24,7 @@ char ph_data[20];                //we make a 20 byte character array to hold inc
 byte in_char = 0;                //used as a 1 byte buffer to store inbound bytes from the pH Circuit.
 byte i = 0;                      //counter used for ph_data array.
 int time_1 = 815;                //used to change the delay needed depending on the command sent to the EZO Class pH Circuit.
-float atlas_scientific_ph;                  //float var used to hold the float value of the pH.
+float atlas_scientific_ph;       //float var used to hold the float value of the pH.
 
 //Initialization of the OneWire Bus und the temp sensor
 const int oneWireBus = D3;                 // GPIO where the DS18B20 is connected to D3
@@ -68,7 +68,7 @@ const char *temp_ds18b20_topic_2 = "aeroponic/growtent1/temperatur/d18b20/sensor
 const char *temp_ds18b20_topic_3 = "aeroponic/growtent1/temperatur/d18b20/sensor3";   //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
 const char *pH_ezo_topic_1 = "aeroponic/growtent1/ph/ezo_circuit/sensor1";            //Adds MQTT topic for the AtlasScientific pH probe
 const char *mqtt_connection_topic = "aeroponic/growtent1/connection/table1";          //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
-const char *mqtt_connection_topic = "aeroponic/growtent1/pH/AtlasScientific/command"; //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
+const char *pH_command_topic = "aeroponic/growtent1/pH/AtlasScientific/command";  //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 //const char* mqtt_username = "cdavid"; //if MQTT server needs credentials they need to be added in the next two lines
 //const char* mqtt_password = "cdavid";
 
@@ -76,6 +76,7 @@ const char *clientID = "ESP-Table_1-2"; // The client id identifies the ESP8266 
 unsigned long noLoop = 0;               //Needed for the deepsleep loop function
 unsigned long lastLoop1 = 0;            //Needed for the millis() loop function
 unsigned long lastLoop2 = 0;            //Needed for the millis() loop function
+unsigned long pHLoop = 0;               //Needed for the millis() of the pH Function to check if 5 minutes are
 
 WiFiClient wifiClient;                                // Initialise the WiFi and MQTT Client objects
 PubSubClient client(mqtt_server_1, 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
@@ -356,75 +357,90 @@ void read_dallas()
     //delay(5000);
   }
 }
-void read_pH(String cmd_code)
+void measure_pH(String cmd_code)
 {
-  int code_length = cmd_code.length(); //Gets the length of the string to be used in the for loop later
+  int code_length = cmd_code.length();    //Gets the length of the string to be used in the for loop later
   strcpy(computerdata, cmd_code.c_str()); // copying the contents of the string to char array
-  //if a command was sent to the EZO device.
-    for (i = 0; i <= code_length; i++)
-    {                                             
-      computerdata[i] = tolower(computerdata[i]); //"Sleep" ≠ "sleep" //set all char to lower case, this is just so this exact sample code can recognize the "sleep" command.
+                                          //if a command was sent to the EZO device.
+  for (i = 0; i <= code_length; i++)
+  {
+    computerdata[i] = tolower(computerdata[i]); //"Sleep" ≠ "sleep" //set all char to lower case, this is just so this exact sample code can recognize the "sleep" command.
+  }
+  i = 0; //reset i, we will need it later
+  if (computerdata[0] == 'c' || computerdata[0] == 'r')
+    time_1 = 815; //if a command has been sent to calibrate or take a reading we wait 815ms so that the circuit has time to take the reading.
+  else
+    time_1 = 250; //if any other command has been sent we wait only 250ms.
+
+  Wire.beginTransmission(pH_address); //call the circuit by its ID number.
+  Wire.write(computerdata);           //transmit the command that was sent through the serial port.
+  Wire.endTransmission();             //end the I2C data transmission.
+
+  if (strcmp(computerdata, "sleep") != 0)
+  { //if the command that has been sent is NOT the sleep command, wait the correct amount of time and request data.
+    //if it is the sleep command, we do nothing. Issuing a sleep command and then requesting data will wake the circuit.
+    delay(time_1); //wait the correct amount of time for the circuit to complete its instruction.
+
+    Wire.requestFrom(pH_address, 20, 1); //call the circuit and request 20 bytes (this may be more than we need)
+    response_code = Wire.read();         //the first byte is the response code, we read this separately.
+
+    switch (response_code)
+    {                            //switch case based on what the response code is.
+    case 1:                      //decimal 1.
+      Serial.println("Success"); //means the command was successful.
+      break;                     //exits the switch case.
+
+    case 2:                     //decimal 2.
+      Serial.println("Failed"); //means the command has failed.
+      break;                    //exits the switch case.
+
+    case 254:                    //decimal 254.
+      Serial.println("Pending"); //means the command has not yet been finished calculating.
+      break;                     //exits the switch case.
+
+    case 255:                    //decimal 255.
+      Serial.println("No Data"); //means there is no further data to send.
+      break;                     //exits the switch case.
     }
-    i = 0; //reset i, we will need it later
-    if (computerdata[0] == 'c' || computerdata[0] == 'r')
-      time_1 = 815; //if a command has been sent to calibrate or take a reading we wait 815ms so that the circuit has time to take the reading.
-    else
-      time_1 = 250; //if any other command has been sent we wait only 250ms.
 
-    Wire.beginTransmission(pH_address); //call the circuit by its ID number.
-    Wire.write(computerdata);           //transmit the command that was sent through the serial port.
-    Wire.endTransmission();             //end the I2C data transmission.
-
-    if (strcmp(computerdata, "sleep") != 0)
-    { //if the command that has been sent is NOT the sleep command, wait the correct amount of time and request data.
-      //if it is the sleep command, we do nothing. Issuing a sleep command and then requesting data will wake the circuit.
-      delay(time_1); //wait the correct amount of time for the circuit to complete its instruction.
-
-      Wire.requestFrom(pH_address, 20, 1); //call the circuit and request 20 bytes (this may be more than we need)
-      response_code = Wire.read();         //the first byte is the response code, we read this separately.
-
-      switch (response_code)
-      {                            //switch case based on what the response code is.
-      case 1:                      //decimal 1.
-        Serial.println("Success"); //means the command was successful.
-        break;                     //exits the switch case.
-
-      case 2:                     //decimal 2.
-        Serial.println("Failed"); //means the command has failed.
-        break;                    //exits the switch case.
-
-      case 254:                    //decimal 254.
-        Serial.println("Pending"); //means the command has not yet been finished calculating.
-        break;                     //exits the switch case.
-
-      case 255:                    //decimal 255.
-        Serial.println("No Data"); //means there is no further data to send.
-        break;                     //exits the switch case.
+    while (Wire.available())
+    {                        //are there bytes to receive.
+      in_char = Wire.read(); //receive a byte.
+      ph_data[i] = in_char;  //load this byte into our array.
+      i += 1;                //incur the counter for the array element.
+      if (in_char == 0)
+      {        //if we see that we have been sent a null command.
+        i = 0; //reset the counter i to 0.
+        break; //exit the while loop.
       }
-
-      while (Wire.available())
-      {                        //are there bytes to receive.
-        in_char = Wire.read(); //receive a byte.
-        ph_data[i] = in_char;  //load this byte into our array.
-        i += 1;                //incur the counter for the array element.
-        if (in_char == 0)
-        {        //if we see that we have been sent a null command.
-          i = 0; //reset the counter i to 0.
-          break; //exit the while loop.
-        }
-      }
-
-      Serial.println(ph_data); //print the data.
     }
-    serial_event = false; //reset the serial event flag.
+
+    Serial.println(ph_data); //print the data.
+  }
+  serial_event = false; //reset the serial event flag.
   //Uncomment this section if you want to take the pH value and convert it into floating point number.
-  atlas_scientific_ph=atof(ph_data);
+  atlas_scientific_ph = atof(ph_data);                           //Converts the array to a float value which we will send via MQTT
+  String pH_string = String((float)atlas_scientific_ph);         //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
+  if (client.publish(pH_ezo_topic_1, String(pH_string).c_str())) // && client.publish(pressure_bme280_topic_2, String(press2).c_str()) //MQTT can only transmit strings
+  {                                                              // PUBLISH to the MQTT Broker (topic was defined at the beginning)
+    Serial.print(pH_string + " sent!");                          //To allow debugging a serial output is written if the measurment was published succesfully.
+  }
+  // Again, client.publish will return a boolean value depending on whether it succeded or not.
+  // If the message failed to send, we will try again, as the connection may have broken.
+  else
+  {
+    Serial.println(pH_string);
+    Serial.println(" failed to send. Reconnecting to MQTT Broker and trying again");
+    client.connect(clientID);
+    delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
+    client.publish(pH_ezo_topic_1, String(pH_string).c_str());
+  }
 }
 //void ph_serialevent()
 //{                                                                       //this interrupt will trigger when the data coming from the serial monitor(pc/mac/other) is received.
-  //received_from_computer = Serial.readBytesUntil(13, computerdata, 20); //we read the data sent from the serial monitor(pc/mac/other) until we see a <CR>. We also count how many characters have been received.
-  //computerdata[received_from_computer] = 0;                             //stop the buffer from transmitting leftovers or garbage.
-  //serial_event = true;                                                  //set the serial event flag.
+//received_from_computer = Serial.readBytesUntil(13, computerdata, 20); //we read the data sent from the serial monitor(pc/mac/other) until we see a <CR>. We also count how many characters have been received.
+//computerdata[received_from_computer] = 0;                             //stop the buffer from transmitting leftovers or garbage.
+//serial_event = true;                                                  //set the serial event flag.
 //}
 void setup()
 {
@@ -464,7 +480,6 @@ void loop()
     delay(50);
     read_dallas();
     delay(100); //Short delay to finish up all calculations before going to DeepSleep
-    read_pH("reading");
     Serial.print("Disconnecting from MQTT Broker");
     client.disconnect(); // disconnect from the MQTT broker
     delay(100);          //Short delay to finish up all calculations before going to DeepSleep
@@ -486,11 +501,25 @@ void loop()
     delay(50);
     read_dallas();
     delay(100);          //Short delay to finish up all calculations before going to DeepSleep
-    read_pH("reading");
-    delay(100);          //Short delay to finish up all calculations before going to DeepSleep
     client.disconnect(); // disconnect from the MQTT broker
     delay(100);          //Short delay to finish up all calculations before going to DeepSleep
     WiFi.disconnect();   // Disconnects the wifi safely
+  }
+
+  if (now - pHLoop > 300000)
+  {
+    pHLoop = now;
+    //connect_wifi_1();
+    //connect_MQTT_1();
+    delay(50);
+    measure_pH("reading");
+    delay(50);
+    measure_pH("sleep");
+    Serial.print("Disconnecting from MQTT Broker");
+    client.disconnect(); // disconnect from the MQTT broker
+    delay(100);          //Short delay to finish up all calculations before going to DeepSleep
+    Serial.print("Disconnecting from WiFi");
+    WiFi.disconnect(); // Disconnects the wifi safely
   }
 }
 
