@@ -24,7 +24,7 @@ char ph_data[20];                //we make a 20 byte character array to hold inc
 byte in_char = 0;                //used as a 1 byte buffer to store inbound bytes from the pH Circuit.
 byte i = 0;                      //counter used for ph_data array.
 int time_1 = 815;                //used to change the delay needed depending on the command sent to the EZO Class pH Circuit.
-float ph_float;                  //float var used to hold the float value of the pH.
+float atlas_scientific_ph;                  //float var used to hold the float value of the pH.
 
 //Initialization of the OneWire Bus und the temp sensor
 const int oneWireBus = D3;                 // GPIO where the DS18B20 is connected to D3
@@ -296,29 +296,6 @@ void measure_pressure()
     //client.publish(pressure_bme280_topic_2, String(press2).c_str());
   }
 }
-/*void callback(char *topic, byte *payload, unsigned int length)
-{
-  Serial.print("Message arrived in topic: ");
-  Serial.println(topic);
-  Serial.print("Message:");
-  String msg;
-  if(topic == "aeroponic/growtent1/pH/AtlasScientific/command"){
-   
-  for (int i = 0; i < length; i++)
-  {
-    Serial.print((char)payload[i]);
-    msg = msg + (char)payload[i];
-  }
-  if (msg == "on")
-  {
-    Serial.println("I received an ON");
-  }
-  else if (msg == "off")
-  {
-    Serial.println("I received an OFF");
-  }
-  }
-}*/
 void read_dallas()
 {
   dallassensors.requestTemperatures(); //Sends a request to the DS18B20 to prepare a temperature reading
@@ -381,13 +358,12 @@ void read_dallas()
 }
 void read_pH(String cmd_code)
 {
-  serial_event == true;
-
-  if (serial_event == true)
-  { //if a command was sent to the EZO device.
-    for (i = 0; i <= received_from_computer; i++)
-    {                                             //set all char to lower case, this is just so this exact sample code can recognize the "sleep" command.
-      computerdata[i] = tolower(computerdata[i]); //"Sleep" ≠ "sleep"
+  int code_length = cmd_code.length(); //Gets the length of the string to be used in the for loop later
+  strcpy(computerdata, cmd_code.c_str()); // copying the contents of the string to char array
+  //if a command was sent to the EZO device.
+    for (i = 0; i <= code_length; i++)
+    {                                             
+      computerdata[i] = tolower(computerdata[i]); //"Sleep" ≠ "sleep" //set all char to lower case, this is just so this exact sample code can recognize the "sleep" command.
     }
     i = 0; //reset i, we will need it later
     if (computerdata[0] == 'c' || computerdata[0] == 'r')
@@ -441,16 +417,15 @@ void read_pH(String cmd_code)
       Serial.println(ph_data); //print the data.
     }
     serial_event = false; //reset the serial event flag.
-  }
   //Uncomment this section if you want to take the pH value and convert it into floating point number.
-  //ph_float=atof(ph_data);
+  atlas_scientific_ph=atof(ph_data);
 }
-void ph_serialevent()
-{                                                                       //this interrupt will trigger when the data coming from the serial monitor(pc/mac/other) is received.
-  received_from_computer = Serial.readBytesUntil(13, computerdata, 20); //we read the data sent from the serial monitor(pc/mac/other) until we see a <CR>. We also count how many characters have been received.
-  computerdata[received_from_computer] = 0;                             //stop the buffer from transmitting leftovers or garbage.
-  serial_event = true;                                                  //set the serial event flag.
-}
+//void ph_serialevent()
+//{                                                                       //this interrupt will trigger when the data coming from the serial monitor(pc/mac/other) is received.
+  //received_from_computer = Serial.readBytesUntil(13, computerdata, 20); //we read the data sent from the serial monitor(pc/mac/other) until we see a <CR>. We also count how many characters have been received.
+  //computerdata[received_from_computer] = 0;                             //stop the buffer from transmitting leftovers or garbage.
+  //serial_event = true;                                                  //set the serial event flag.
+//}
 void setup()
 {
   Serial.begin(9600);                          // Initialize the I2C bus (BH1750 library doesn't do this automatically)
@@ -475,7 +450,7 @@ void loop()
 { //This function will continously be executed; everything which needs to be done recurringly is set here.
   client.loop();
   unsigned long now = millis();
-  if (now - lastLoop1 > 5000)
+  if (now - lastLoop1 > 30000)
   {
     lastLoop1 = now;
     //connect_wifi_1();
@@ -496,7 +471,7 @@ void loop()
     Serial.print("Disconnecting from WiFi");
     WiFi.disconnect(); // Disconnects the wifi safely
   }
-  if (now - lastLoop2 > 5000)
+  if (now - lastLoop2 > 30000)
   {
     lastLoop2 = now;
     Serial.print("Skipping Connecton 2 for now");
@@ -511,8 +486,34 @@ void loop()
     delay(50);
     read_dallas();
     delay(100);          //Short delay to finish up all calculations before going to DeepSleep
+    read_pH("reading");
+    delay(100);          //Short delay to finish up all calculations before going to DeepSleep
     client.disconnect(); // disconnect from the MQTT broker
     delay(100);          //Short delay to finish up all calculations before going to DeepSleep
     WiFi.disconnect();   // Disconnects the wifi safely
   }
 }
+
+/*void callback(char *topic, byte *payload, unsigned int length)
+{
+  Serial.print("Message arrived in topic: ");
+  Serial.println(topic);
+  Serial.print("Message:");
+  String msg;
+  if(topic == "aeroponic/growtent1/pH/AtlasScientific/command"){
+   
+  for (int i = 0; i < length; i++)
+  {
+    Serial.print((char)payload[i]);
+    msg = msg + (char)payload[i];
+  }
+  if (msg == "on")
+  {
+    Serial.println("I received an ON");
+  }
+  else if (msg == "off")
+  {
+    Serial.println("I received an OFF");
+  }
+  }
+}*/
