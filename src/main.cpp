@@ -55,8 +55,8 @@ Adafruit_Sensor *bme_humidity = bme.getHumiditySensor(); //Gets humidity value f
 
 // MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
-const char *mqtt_server_1 = "192.168.2.105";                                       //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-const char *mqtt_server_2 = "XXX.XXX.XXX.XXX";                                     //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server_1 = "192.168.178.30";                                       //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server_2 = "192.168.178.40";                                     //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 const char *temp_bme280_topic_1 = "aeroponic/growtent1/temperatur/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 //const char *temp_bme280_topic_2 = "aeroponic/growtent1/temperatur/bme280/sensor2";   //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *humidity_bme280_topic_1 = "aeroponic/growtent1/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
@@ -72,7 +72,7 @@ const char *pH_command_topic = "aeroponic/growtent1/pH/AtlasScientific/command";
 //const char* mqtt_username = "cdavid"; //if MQTT server needs credentials they need to be added in the next two lines
 //const char* mqtt_password = "cdavid";
 
-const char *clientID = "ESP-Table_1-2"; // The client id identifies the ESP8266 device. In this experiment we will use ESP-Table_X-Y (X = Table No, Y = Microcontroller No) Think of it a bit like a hostname (Or just a name, like Greg).
+const char *clientID = "ESP-Table_1-1"; // The client id identifies the ESP8266 device. In this experiment we will use ESP-Table_X-Y (X = Table No, Y = Microcontroller No) Think of it a bit like a hostname (Or just a name, like Greg).
 unsigned long noLoop = 0;               //Needed for the deepsleep loop function
 unsigned long lastLoop1 = 0;            //Needed for the millis() loop function
 unsigned long lastLoop2 = 0;            //Needed for the millis() loop function
@@ -84,8 +84,8 @@ PubSubClient client(mqtt_server_1, 1883, wifiClient); // 1883 is the listener po
 void connect_wifi_1()
 {
   // WiFi connection settings
-  const char *ssid = "Hood Lan";                      //This line needs to be populated by the SSID of the wifi network we want to connect to
-  const char *wifi_password = "Ja17081994Yp08091992"; //This line is populated by the password of the wifi network
+  const char *ssid = "FRITZ!Box Fon WLAN 7390";                      //This line needs to be populated by the SSID of the wifi network we want to connect to
+  const char *wifi_password = "3830429555162473"; //This line is populated by the password of the wifi network
   delay(10);
   // We start by connecting to a WiFi network
   Serial.println();
@@ -357,7 +357,7 @@ void read_dallas()
     //delay(5000);
   }
 }
-void measure_pH(String cmd_code)
+/*void measure_pH(String cmd_code)
 {
   int code_length = cmd_code.length();    //Gets the length of the string to be used in the for loop later
   strcpy(computerdata, cmd_code.c_str()); // copying the contents of the string to char array
@@ -435,7 +435,7 @@ void measure_pH(String cmd_code)
     delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
     client.publish(pH_ezo_topic_1, String(pH_string).c_str());
   }
-}
+}*/
 //void ph_serialevent()
 //{                                                                       //this interrupt will trigger when the data coming from the serial monitor(pc/mac/other) is received.
 //received_from_computer = Serial.readBytesUntil(13, computerdata, 20); //we read the data sent from the serial monitor(pc/mac/other) until we see a <CR>. We also count how many characters have been received.
@@ -469,8 +469,8 @@ void loop()
   if (now - lastLoop1 > 30000)
   {
     lastLoop1 = now;
-    //connect_wifi_1();
-    //connect_MQTT_1();
+    connect_wifi_1();
+    connect_MQTT_1();
     delay(50);
     measure_temp();
     delay(50);
@@ -506,7 +506,7 @@ void loop()
     WiFi.disconnect();   // Disconnects the wifi safely
   }
 
-  if (now - pHLoop > 300000)
+  /*if (now - pHLoop > 300000)
   {
     pHLoop = now;
     //connect_wifi_1();
@@ -520,7 +520,7 @@ void loop()
     delay(100);          //Short delay to finish up all calculations before going to DeepSleep
     Serial.print("Disconnecting from WiFi");
     WiFi.disconnect(); // Disconnects the wifi safely
-  }
+  }*/
 }
 
 /*void callback(char *topic, byte *payload, unsigned int length)
