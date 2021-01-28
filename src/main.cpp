@@ -5,7 +5,7 @@ Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Contro
  **/
 
 // Include the libraries we need
-//#include <Arduino.h>
+#include <Arduino.h>
 #include <Wire.h> //Adds library for the I2C bus on D1 (SCL) and D2(SCD) (both can be changed on the ESP8266 to the deisred GPIO pins)
 //#include <SPI.h>
 #include <OneWire.h>           //Adds library needed to initialize and use the 1-Wire protocoll for DS18B20 sensors
@@ -72,14 +72,14 @@ const char *pH_command_topic = "aeroponic/growtent1/pH/AtlasScientific/command";
 //const char* mqtt_username = "cdavid"; //if MQTT server needs credentials they need to be added in the next two lines
 //const char* mqtt_password = "cdavid";
 
-const char *clientID = "ESP-Table_1-1"; // The client id identifies the ESP8266 device. In this experiment we will use ESP-Table_X-Y (X = Table No, Y = Microcontroller No) Think of it a bit like a hostname (Or just a name, like Greg).
+const char *clientID = "ESPTest"; // The client id identifies the ESP8266 device. In this experiment we will use ESP-Table_X-Y (X = Table No, Y = Microcontroller No) Think of it a bit like a hostname (Or just a name, like Greg).
 unsigned long noLoop = 0;               //Needed for the deepsleep loop function
 unsigned long lastLoop1 = 0;            //Needed for the millis() loop function
 unsigned long lastLoop2 = 0;            //Needed for the millis() loop function
 unsigned long pHLoop = 0;               //Needed for the millis() of the pH Function to check if 5 minutes are
 
-WiFiClient wifiClient;                                // Initialise the WiFi and MQTT Client objects
-PubSubClient client(mqtt_server_1, 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
+WiFiClient espClient;                                // Initialise the WiFi and MQTT Client objects
+PubSubClient client(mqtt_server_1, 1883, espClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
 
 void connect_wifi_1()
 {
@@ -142,12 +142,8 @@ void connect_wifi_2()
 }
 void connect_MQTT_1()
 { //Defines a function "connect_MQTT" which includes all necessary steps to connect the ESP with the server
-  // Create a random client ID
-  //String clientId = "SEED-";
-  //clientId += String(random(0xffff), HEX);
-  //PubSubClient client(espClient);
+  PubSubClient client(mqtt_server_1, 1883, espClient); // 1883 is the listener port for the Broker
   //client.setServer(mqtt_server_1, 1883);
-  PubSubClient client(mqtt_server_1, 1883, wifiClient); // 1883 is the listener port for the Broker
   // Connect to MQTT Broker
   // client.connect returns a boolean value to let us know if the connection was successful.
   // If the connection is failing, make sure you are using the correct MQTT Username and Password (Setup Earlier in the Instructable)
@@ -163,7 +159,7 @@ void connect_MQTT_1()
   {
     Serial.println("Connection to MQTT Broker failed...");
   }
-  client.publish(mqtt_connection_topic, "on");
+  //client.publish(mqtt_connection_topic, "on");
 }
 void connect_MQTT_2()
 {
@@ -175,7 +171,7 @@ void connect_MQTT_2()
   //clientId += String(random(0xffff), HEX);
   client.setServer(mqtt_server_2, 1883);
   //Defines a function "connect_MQTT" which includes all necessary steps to connect the ESP with the server
-  PubSubClient client(mqtt_server_2, 1883, wifiClient); // 1883 is the listener port for the Broker
+  PubSubClient client(mqtt_server_2, 1883, espClient); // 1883 is the listener port for the Broker
   // Connect to MQTT Broker
   // client.connect returns a boolean value to let us know if the connection was successful.
   // If the connection is failing, make sure you are using the correct MQTT Username and Password (Setup Earlier in the Instructable)
@@ -464,12 +460,12 @@ void setup()
 }
 void loop()
 { //This function will continously be executed; everything which needs to be done recurringly is set here.
-  client.loop();
   unsigned long now = millis();
-  if (now - lastLoop1 > 30000)
+  if (now - lastLoop1 > 3000)
   {
     lastLoop1 = now;
     connect_wifi_1();
+    delay(100);
     connect_MQTT_1();
     delay(50);
     measure_temp();
@@ -481,29 +477,29 @@ void loop()
     read_dallas();
     delay(100); //Short delay to finish up all calculations before going to DeepSleep
     Serial.print("Disconnecting from MQTT Broker");
-    client.disconnect(); // disconnect from the MQTT broker
+    //client.disconnect(); // disconnect from the MQTT broker
     delay(100);          //Short delay to finish up all calculations before going to DeepSleep
     Serial.print("Disconnecting from WiFi");
-    WiFi.disconnect(); // Disconnects the wifi safely
+    //WiFi.disconnect(); // Disconnects the wifi safely
   }
-  if (now - lastLoop2 > 30000)
+  if (now - lastLoop2 > 3000)
   {
     lastLoop2 = now;
     Serial.print("Skipping Connecton 2 for now");
     //connect_wifi_2();
     //connect_MQTT_2();
     delay(50);
-    measure_temp();
+    //measure_temp();
     delay(50);
-    measure_humidity();
+    //measure_humidity();
     delay(50);
-    measure_pressure();
+    //measure_pressure();
     delay(50);
-    read_dallas();
+    //read_dallas();
     delay(100);          //Short delay to finish up all calculations before going to DeepSleep
-    client.disconnect(); // disconnect from the MQTT broker
+    //client.disconnect(); // disconnect from the MQTT broker
     delay(100);          //Short delay to finish up all calculations before going to DeepSleep
-    WiFi.disconnect();   // Disconnects the wifi safely
+    //WiFi.disconnect();   // Disconnects the wifi safely
   }
 
   /*if (now - pHLoop > 300000)
@@ -521,6 +517,7 @@ void loop()
     Serial.print("Disconnecting from WiFi");
     WiFi.disconnect(); // Disconnects the wifi safely
   }*/
+ // client.loop();
 }
 
 /*void callback(char *topic, byte *payload, unsigned int length)
