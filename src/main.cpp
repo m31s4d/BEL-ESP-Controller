@@ -67,8 +67,8 @@ const char *temp_ds18b20_topic_1 = "aeroponic/growtent1/temperatur/d18b20/sensor
 const char *temp_ds18b20_topic_2 = "aeroponic/growtent1/temperatur/d18b20/sensor2";   //Adds MQTT topic for the dallas senssor 2
 const char *temp_ds18b20_topic_3 = "aeroponic/growtent1/temperatur/d18b20/sensor3";   //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
 const char *pH_ezo_topic_1 = "aeroponic/growtent1/ph/ezo_circuit/sensor1";            //Adds MQTT topic for the AtlasScientific pH probe
-const char *mqtt_connection_topic = "aeroponic/growtent1/connection/table1";          //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 const char *pH_command_topic = "aeroponic/growtent1/pH/AtlasScientific/command";  //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+const char *mqtt_connection_topic = "aeroponic/growtent1/connection/table1";          //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 //const char* mqtt_username = "cdavid"; //if MQTT server needs credentials they need to be added in the next two lines
 //const char* mqtt_password = "cdavid";
 
@@ -252,7 +252,7 @@ void measure_humidity()
   //MQTT can only transmit strings
   if (client.publish(humidity_bme280_topic_1, String(humi).c_str())) // && client.publish(humidity_bme280_topic_2, String(humi2).c_str())
   {                                                                  // PUBLISH to the MQTT Broker (topic was defined at the beginning)
-    Serial.println(humi + " sent to Server!");                       //To allow debugging a serial output is written if the measurment was published succesfully.
+    Serial.println(humi + " sent to server!");                       //To allow debugging a serial output is written if the measurment was published succesfully.
   }
   // Again, client.publish will return a boolean value depending on whether it succeded or not.
   // If the message failed to send, we will try again, as the connection may have broken.
@@ -279,7 +279,7 @@ void measure_pressure()
   //MQTT can only transmit strings
   if (client.publish(pressure_bme280_topic_1, String(press).c_str())) // && client.publish(pressure_bme280_topic_2, String(press2).c_str())
   {                                                                   // PUBLISH to the MQTT Broker (topic was defined at the beginning)
-    Serial.println(press + " sent!");                                 //To allow debugging a serial output is written if the measurment was published succesfully.
+    Serial.println(press + " sent to server!");                                 //To allow debugging a serial output is written if the measurment was published succesfully.
   }
   // Again, client.publish will return a boolean value depending on whether it succeded or not.
   // If the message failed to send, we will try again, as the connection may have broken.
@@ -315,7 +315,7 @@ void read_dallas()
       {
         //client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()); // PUBLISH to the MQTT Broker (topic was defined at the beginning)
         //client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str());
-        Serial.println(temp_dallas + " sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
+        Serial.println(temp_dallas + " of sensor" + i +"sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
       }
       // Again, client.publish will return a boolean value depending on whether it succeded or not.
       // If the message failed to send, we will try again, as the connection may have broken.
@@ -331,7 +331,7 @@ void read_dallas()
       {
         //client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()); // PUBLISH to the MQTT Broker (topic was defined at the beginning)
         //client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str());
-        Serial.println(temp_dallas + " sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
+        Serial.println(temp_dallas + " of sensor" + i +"sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
       }
       // Again, client.publish will return a boolean value depending on whether it succeded or not.
       // If the message failed to send, we will try again, as the connection may have broken.
@@ -342,6 +342,22 @@ void read_dallas()
         client.connect(clientID);
         delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
         client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str());
+      }
+      if (i == 2 && client.publish(temp_ds18b20_topic_3, String(temp_dallas).c_str()))
+      {
+        //client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()); // PUBLISH to the MQTT Broker (topic was defined at the beginning)
+        //client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str());
+        Serial.println(temp_dallas + " of sensor" + i +"sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
+      }
+      // Again, client.publish will return a boolean value depending on whether it succeded or not.
+      // If the message failed to send, we will try again, as the connection may have broken.
+      else
+      {
+        Serial.print(temp_dallas);
+        Serial.println(" failed to send. Reconnecting to MQTT Broker and trying again");
+        client.connect(clientID);
+        delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
+        client.publish(temp_ds18b20_topic_3, String(temp_dallas).c_str());
       }
     }
     //float temperatureC = dallassensors.getTempCByIndex(0); //Adds the value of the 0 device of temperature to the variable tempc
@@ -461,7 +477,7 @@ void setup()
 void loop()
 { //This function will continously be executed; everything which needs to be done recurringly is set here.
   unsigned long now = millis();
-  if (now - lastLoop1 > 3000)
+  if (now - lastLoop1 > 15000)
   {
     lastLoop1 = now;
     connect_wifi_1();
@@ -479,27 +495,27 @@ void loop()
     Serial.print("Disconnecting from MQTT Broker");
     client.disconnect(); // disconnect from the MQTT broker
     delay(1000);          //Short delay to finish up all calculations before going to DeepSleep
-    Serial.print("Disconnecting from WiFi");
-    WiFi.disconnect(); // Disconnects the wifi safely
+    //Serial.print("Disconnecting from WiFi");
+    //WiFi.disconnect(); // Disconnects the wifi safely
   }
-  if (now - lastLoop2 > 3000)
+  if (now - lastLoop2 > 15000)
   {
     lastLoop2 = now;
-    Serial.print("Skipping Connecton 2 for now");
+    //Serial.print("Skipping Connecton 2 for now");
     //connect_wifi_2();
     delay(1000);
-    //connect_MQTT_2();
+    connect_MQTT_2();
     delay(50);
-    //measure_temp();
+    measure_temp();
     delay(50);
-    //measure_humidity();
+    measure_humidity();
     delay(50);
-    //measure_pressure();
+    measure_pressure();
     delay(50);
-    //read_dallas();
+    read_dallas();
     delay(100);          //Short delay to finish up all calculations before going to DeepSleep
-    //client.disconnect(); // disconnect from the MQTT broker
-    delay(100);          //Short delay to finish up all calculations before going to DeepSleep
+    client.disconnect(); // disconnect from the MQTT broker
+    delay(1000);          //Short delay to finish up all calculations before going to DeepSleep
     //WiFi.disconnect();   // Disconnects the wifi safely
   }
 
