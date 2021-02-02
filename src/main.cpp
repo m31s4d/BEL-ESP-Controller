@@ -81,49 +81,26 @@ unsigned long pHLoop = 0;               //Needed for the millis() of the pH Func
 WiFiClient espClient;                                // Initialise the WiFi and MQTT Client objects
 PubSubClient client(mqtt_server_1, 1883, espClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
 
-void connect_wifi_1()
+void connect_wifi(const char *var_ssid, const char *var_wifi_password)
 {
   // WiFi connection settings
-  const char *ssid = "FRITZ!Box Fon WLAN 7390";                      //This line needs to be populated by the SSID of the wifi network we want to connect to
-  const char *wifi_password = "3830429555162473"; //This line is populated by the password of the wifi network
-  delay(10);
-  // We start by connecting to a WiFi network
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
+  //const char *ssid = "Hood Lan";                      //This line needs to be populated by the SSID of the wifi network we want to connect to
+  //const char *wifi_password = "Ja17081994Yp08091992"; //This line is populated by the password of the wifi network
 
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, wifi_password);
-
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-  }
-
-  randomSeed(micros());
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-  Serial.print("ClientID: ");
-  Serial.println(clientID);
-}
-void connect_wifi_2()
-{
   //Defines the wifi connection settings of the second broker
-  const char *ssid = " ";
-  const char *wifi_password = " ";
-
+  //const char *ssid = "WLAN-173564";
+  //const char *wifi_password = "40568512259452661617";
+  // WiFi connection settings
+  //const char *ssid = "FRITZ!Box Fon WLAN 7390";                      //This line needs to be populated by the SSID of the wifi network we want to connect to
+  //const char *wifi_password = "3830429555162473"; //This line is populated by the password of the wifi network
   delay(10);
   // We start by connecting to a WiFi network
   Serial.println();
   Serial.print("Connecting to ");
-  Serial.println(ssid);
+  Serial.println(var_ssid);
 
   WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, wifi_password);
+  WiFi.begin(var_ssid, var_wifi_password);
 
   while (WiFi.status() != WL_CONNECTED)
   {
@@ -132,7 +109,6 @@ void connect_wifi_2()
   }
 
   randomSeed(micros());
-
   Serial.println("");
   Serial.println("WiFi connected");
   Serial.print("IP address: ");
@@ -140,38 +116,14 @@ void connect_wifi_2()
   Serial.print("ClientID: ");
   Serial.println(clientID);
 }
-void connect_MQTT_1()
+void connect_MQTT(const char* var_mqtt_client, int port_num)
 { //Defines a function "connect_MQTT" which includes all necessary steps to connect the ESP with the server
-  PubSubClient client(mqtt_server_1, 1883, espClient); // 1883 is the listener port for the Broker
-  //client.setServer(mqtt_server_1, 1883);
-  // Connect to MQTT Broker
-  // client.connect returns a boolean value to let us know if the connection was successful.
-  // If the connection is failing, make sure you are using the correct MQTT Username and Password (Setup Earlier in the Instructable)
-  if (client.connect(clientID))
-  {
-    Serial.println("Connected to MQTT Broker!");
-    //MQTT Topics to subscribe to for functioning. Structure as follows: project/location/type/number
-    //Following are test topics
-    //client.subscribe(tempsensor1_topic);
-    delay(100);
-  }
-  else
-  {
-    Serial.println("Connection to MQTT Broker failed...");
-  }
-  //client.publish(mqtt_connection_topic, "on");
-}
-void connect_MQTT_2()
-{
   // Create a random client ID
   //String clientId = "SEED-";
-  //String chipname = String(ESP.getChipId()); //Call to get ChipID to add to the client ID
-  //clientId += chipname;
-  //Serial.print(clientId);
   //clientId += String(random(0xffff), HEX);
-  client.setServer(mqtt_server_2, 1883);
-  //Defines a function "connect_MQTT" which includes all necessary steps to connect the ESP with the server
-  PubSubClient client(mqtt_server_2, 1883, espClient); // 1883 is the listener port for the Broker
+  //PubSubClient client(espClient);
+  //client.setServer(mqtt_server_1, 1883);
+  PubSubClient client(var_mqtt_client, port_num, espClient); // 1883 is the listener port for the Broker
   // Connect to MQTT Broker
   // client.connect returns a boolean value to let us know if the connection was successful.
   // If the connection is failing, make sure you are using the correct MQTT Username and Password (Setup Earlier in the Instructable)
@@ -182,13 +134,41 @@ void connect_MQTT_2()
     //Following are test topics
     //client.subscribe(tempsensor1_topic);
     delay(100);
+    //client.publish(mqtt_connection_topic_1, "on");
   }
   else
   {
     Serial.println("Connection to MQTT Broker failed...");
   }
-  client.publish(mqtt_connection_topic, "on");
 }
+void send_data_MQTT(String value, const char *topic)
+{
+  //char *mqtt_topic = topic;
+
+  //strcpy(mqtt_topic, topic.c_str()); // copying the contents of the string to char array
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    if (client.publish(topic, String(value).c_str()))
+    {                        // PUBLISH to the MQTT Broker (topic was defined at the beginning)
+      Serial.println(value); //To allow debugging a serial output is written if the measurment was published succesfully.
+      Serial.print(" sent!");
+    }
+    // Again, client.publish will return a boolean value depending on whether it succeded or not.
+    // If the message failed to send, we will try again, as the connection may have broken.
+    else
+    {
+      Serial.println(value);
+      Serial.print(" failed to send. Reconnecting to MQTT Broker and trying again");
+      client.connect(clientID);
+      delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
+      client.publish(topic, String(value).c_str());
+    }
+  }
+}
+/*void measure_soil(){
+  sensorValue = analogRead(analogInPin);// read the analog in value:
+  Serial.println(sensorValue); //Prints out the value of the soil sensor to check if it is wired correctly
+}*/
 /*void measure_distance_ultrasonic(){
 int trigger=D7;                        // Der Trigger Pin
 int echo=D8;                                  // Der Echo Pin
@@ -214,57 +194,24 @@ void measure_temp()
   //bme_pressure->getEvent(&pressure_event);
   //bme_humidity->getEvent(&humidity_event);
   bme280_temp = bme.readTemperature(); //Sets the variable temp to the temp measure of the BME280
-  //bme280_temp2 = bme2.readTemperature(); //Sets the variable temp to the temp measure of the BME280
   //bme280_humidity = humidity_event.relative_humidity; //Sets variable bme_humidity to humidity measure of BME280
   //bme280_pressure = pressure_event.pressure; //Sets variable bme_pressure to pressure measire of BME280
   //float bme280_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
   String temp = String((float)bme280_temp); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
-  //String temp2 = String((float)bme280_temp2); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //String humi=String((float)bme280_humidity); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //String press=String((float)bme280_pressure); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //String alti=String((float)bme280_altitude); //Important to change the value of the variable to a string
   //MQTT can only transmit strings
-  if (client.publish(temp_bme280_topic_1, String(temp).c_str())) //&& client.publish(temp_bme280_topic_2, String(temp2).c_str())
-  {                                                              // PUBLISH to the MQTT Broker (topic was defined at the beginning)
-    Serial.print(temp + " sent to Broker!");                     //To allow debugging a serial output is written if the measurment was published succesfully.
-  }
-  // Again, client.publish will return a boolean value depending on whether it succeded or not.
-  // If the message failed to send, we will try again, as the connection may have broken.
-  else
-  {
-    Serial.println(temp);
-    //Serial.println(temp2);
-    Serial.print(" failed to send. Reconnecting to MQTT Broker and trying again");
-    client.connect(clientID);
-    delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
-    client.publish(temp_bme280_topic_1, String(temp).c_str());
-    //client.publish(temp_bme280_topic_2, String(temp2).c_str());
-  }
+  send_data_MQTT(temp, temp_bme280_topic_1);
 }
 void measure_humidity()
 {
   sensors_event_t /*temp_event, pressure_event,*/ humidity_event; //Initialization of the sensor events to use them later
   bme_humidity->getEvent(&humidity_event);
-  bme280_humidity = bme.readHumidity(); //Sets variable bme_humidity to humidity measure of BME280
-  //bme280_humidity2 = bme2.readHumidity();         //Sets variable bme_humidity to humidity measure of BME280
+  bme280_humidity = bme.readHumidity();         //Sets variable bme_humidity to humidity measure of BME280
   String humi = String((float)bme280_humidity); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
-  //String humi2 = String((float)bme280_humidity2); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //MQTT can only transmit strings
-  if (client.publish(humidity_bme280_topic_1, String(humi).c_str())) // && client.publish(humidity_bme280_topic_2, String(humi2).c_str())
-  {                                                                  // PUBLISH to the MQTT Broker (topic was defined at the beginning)
-    Serial.println(humi + " sent to server!");                       //To allow debugging a serial output is written if the measurment was published succesfully.
-  }
-  // Again, client.publish will return a boolean value depending on whether it succeded or not.
-  // If the message failed to send, we will try again, as the connection may have broken.
-  else
-  {
-    Serial.println(humi);
-    Serial.println(" failed to send. Reconnecting to MQTT Broker and trying again");
-    client.connect(clientID);
-    delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
-    client.publish(humidity_bme280_topic_1, String(humi).c_str());
-    //client.publish(humidity_bme280_topic_2, String(humi2).c_str());
-  }
+  send_data_MQTT(humi, humidity_bme280_topic_1);
 }
 void measure_pressure()
 {
@@ -272,103 +219,26 @@ void measure_pressure()
   //bme_temp->getEvent(&temp_event);
   bme_pressure->getEvent(&pressure_event);
   bme280_pressure = bme.readPressure(); //Sets variable bme_pressure to pressure measire of BME280
-  //bme280_pressure2 = bme2.readPressure(); //Sets variable bme_pressure to pressure measire of BME280
   //bme280_pressure = pressure_event.pressure;     //Sets variable bme_pressure to pressure measire of BME280
   String press = String((float)bme280_pressure); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
-  //String press2 = String((float)bme280_pressure2); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //MQTT can only transmit strings
-  if (client.publish(pressure_bme280_topic_1, String(press).c_str())) // && client.publish(pressure_bme280_topic_2, String(press2).c_str())
-  {                                                                   // PUBLISH to the MQTT Broker (topic was defined at the beginning)
-    Serial.println(press + " sent to server!");                                 //To allow debugging a serial output is written if the measurment was published succesfully.
-  }
-  // Again, client.publish will return a boolean value depending on whether it succeded or not.
-  // If the message failed to send, we will try again, as the connection may have broken.
-  else
-  {
-    Serial.println(press);
-    Serial.println(" failed to send. Reconnecting to MQTT Broker and trying again");
-    client.connect(clientID);
-    delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
-    client.publish(pressure_bme280_topic_1, String(press).c_str());
-    //client.publish(pressure_bme280_topic_2, String(press2).c_str());
-  }
+  send_data_MQTT(press, pressure_bme280_topic_1);
 }
-void read_dallas()
+/*void measure_altitude()
 {
-  dallassensors.requestTemperatures(); //Sends a request to the DS18B20 to prepare a temperature reading
-  // Loop through each device, print out temperature data
-  for (int i = 0; i < numDevices; i++)
-  {
-    // Search the wire for address
-    if (dallassensors.getAddress(tempDeviceAddress, i))
-    {
-      // Output the device ID
-      Serial.print("Temperature for device: ");
-      Serial.println(i, DEC);
+#define SEALEVELPRESSURE_HPA (1013.25)                        //Defines the pressure at sea level to calculate the approximate alltitude via the current pressure level
+  sensors_event_t temp_event, pressure_event, humidity_event; //Initialization of the sensor events to use them later
+  bme_temp->getEvent(&temp_event);
+  bme_pressure->getEvent(&pressure_event);
+  bme_humidity->getEvent(&humidity_event);
+  bme280_temp = temp_event.temperature;               //Sets the variable temp to the temp measure of the BME280
+  bme280_humidity = humidity_event.relative_humidity; //Sets variable bme_humidity to humidity measure of BME280
+  bme280_pressure = pressure_event.pressure;          //Sets variable bme_pressure to pressure measire of BME280
+  float bme280_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+  String alti = String((float)bme280_altitude); //Important to change the value of the variable to a string
 
-      // Print the data
-      float tempC = dallassensors.getTempC(tempDeviceAddress);
-      String temp_dallas = String((float)tempC); //Important to change the value of the variable to a string
-      Serial.print("Temp C: ");
-      Serial.print(tempC);
-      if (i == 0 && client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()))
-      {
-        //client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()); // PUBLISH to the MQTT Broker (topic was defined at the beginning)
-        //client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str());
-        Serial.println(temp_dallas + " of sensor" + i +"sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
-      }
-      // Again, client.publish will return a boolean value depending on whether it succeded or not.
-      // If the message failed to send, we will try again, as the connection may have broken.
-      else
-      {
-        Serial.println(temp_dallas);
-        Serial.println(" failed to send. Reconnecting to MQTT Broker and trying again");
-        client.connect(clientID);
-        delay(10);                                                         // This delay ensures that client.publish doesn't clash with the client.connect call
-        client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()); // PUBLISH to the MQTT Broker (topic was defined at the beginning)
-      }
-      if (i == 1 && client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str()))
-      {
-        //client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()); // PUBLISH to the MQTT Broker (topic was defined at the beginning)
-        //client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str());
-        Serial.println(temp_dallas + " of sensor" + i +"sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
-      }
-      // Again, client.publish will return a boolean value depending on whether it succeded or not.
-      // If the message failed to send, we will try again, as the connection may have broken.
-      else
-      {
-        Serial.print(temp_dallas);
-        Serial.println(" failed to send. Reconnecting to MQTT Broker and trying again");
-        client.connect(clientID);
-        delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
-        client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str());
-      }
-      if (i == 2 && client.publish(temp_ds18b20_topic_3, String(temp_dallas).c_str()))
-      {
-        //client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()); // PUBLISH to the MQTT Broker (topic was defined at the beginning)
-        //client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str());
-        Serial.println(temp_dallas + " of sensor" + i +"sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
-      }
-      // Again, client.publish will return a boolean value depending on whether it succeded or not.
-      // If the message failed to send, we will try again, as the connection may have broken.
-      else
-      {
-        Serial.print(temp_dallas);
-        Serial.println(" failed to send. Reconnecting to MQTT Broker and trying again");
-        client.connect(clientID);
-        delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
-        client.publish(temp_ds18b20_topic_3, String(temp_dallas).c_str());
-      }
-    }
-    //float temperatureC = dallassensors.getTempCByIndex(0); //Adds the value of the 0 device of temperature to the variable tempc
-    //float temperatureF = sensors.getTempFByIndex(0);
-    //Serial.print(temperatureC); //Prints the value of the variable tempc in the Serial Console
-    //Serial.println("C");
-    //Serial.print(temperatureF);
-    //Serial.println("F");
-    //delay(5000);
-  }
-}
+  send_data_MQTT(alti, altitude_topic);
+}*/
 /*void measure_pH(String cmd_code)
 {
   int code_length = cmd_code.length();    //Gets the length of the string to be used in the for loop later
@@ -454,6 +324,57 @@ void read_dallas()
 //computerdata[received_from_computer] = 0;                             //stop the buffer from transmitting leftovers or garbage.
 //serial_event = true;                                                  //set the serial event flag.
 //}
+void read_dallas()
+{
+  dallassensors.requestTemperatures(); //Sends a request to the DS18B20 to prepare a temperature reading
+  // Loop through each device, print out temperature data
+  for (int i = 0; i < numDevices; i++)
+  {
+    // Search the wire for address
+    if (dallassensors.getAddress(tempDeviceAddress, i))
+    {
+      // Output the device ID
+      Serial.print("Temperature for device: ");
+      Serial.println(i, DEC);
+
+      // Print the data
+      float tempC = dallassensors.getTempC(tempDeviceAddress);
+      String temp_dallas = String((float)tempC); //Important to change the value of the variable to a string
+      Serial.print("Temp C: ");
+      Serial.print(tempC);
+      if (i == 0)
+      {
+        //client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()); // PUBLISH to the MQTT Broker (topic was defined at the beginning)
+        //client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str());
+        send_data_MQTT(temp_dallas, temp_ds18b20_topic_1);
+        Serial.println(temp_dallas + " of sensor" + i +"sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
+      }
+      // Again, client.publish will return a boolean value depending on whether it succeded or not.
+      // If the message failed to send, we will try again, as the connection may have broken.
+      if (i == 1)
+      {
+        //client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()); // PUBLISH to the MQTT Broker (topic was defined at the beginning)
+        //client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str());
+        send_data_MQTT(temp_dallas, temp_ds18b20_topic_2);
+        Serial.println(temp_dallas + " of sensor" + i +"sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
+      }
+     if (i == 2 && client.publish(temp_ds18b20_topic_3, String(temp_dallas).c_str()))
+      {
+        //client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()); // PUBLISH to the MQTT Broker (topic was defined at the beginning)
+        //client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str());
+        send_data_MQTT(temp_dallas, temp_ds18b20_topic_3);
+        Serial.println(temp_dallas + " of sensor" + i +"sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
+      }
+    }
+    //float temperatureC = dallassensors.getTempCByIndex(0); //Adds the value of the 0 device of temperature to the variable tempc
+    //float temperatureF = sensors.getTempFByIndex(0);
+    //Serial.print(temperatureC); //Prints the value of the variable tempc in the Serial Console
+    //Serial.println("C");
+    //Serial.print(temperatureF);
+    //Serial.println("F");
+    //delay(5000);
+  }
+}
 void setup()
 {
   Serial.begin(9600);                          // Initialize the I2C bus (BH1750 library doesn't do this automatically)
@@ -476,13 +397,19 @@ void setup()
 }
 void loop()
 { //This function will continously be executed; everything which needs to be done recurringly is set here.
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    //connect_wifi("Hood Lan", "Ja17081994Yp08091992");
+    //connect_MQTT(mqtt_server_1, 1883);
+    delay(100);
+  }
   unsigned long now = millis();
   if (now - lastLoop1 > 15000)
   {
     lastLoop1 = now;
-    connect_wifi_1();
+    connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
     delay(1000);
-    connect_MQTT_1();
+    connect_MQTT(mqtt_server_1, 1883);
     delay(50);
     measure_temp();
     delay(50);
@@ -502,9 +429,9 @@ void loop()
   {
     lastLoop2 = now;
     //Serial.print("Skipping Connecton 2 for now");
-    //connect_wifi_2();
+    //connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
     delay(1000);
-    connect_MQTT_2();
+    connect_MQTT(mqtt_server_2, 1883);
     delay(50);
     measure_temp();
     delay(50);
