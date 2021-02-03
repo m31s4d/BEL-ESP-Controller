@@ -121,9 +121,7 @@ void connect_MQTT(const char* var_mqtt_client, int port_num)
   // Create a random client ID
   //String clientId = "SEED-";
   //clientId += String(random(0xffff), HEX);
-  //PubSubClient client(espClient);
-  //client.setServer(mqtt_server_1, 1883);
-   client.setServer(var_mqtt_client, port_num);
+  client.setServer(var_mqtt_client, port_num); //Important to set the MQTT Server in each connection call, otherwise a connection will not be successful
   PubSubClient client(var_mqtt_client, port_num, wifiClient); // 1883 is the listener port for the Broker
   // Connect to MQTT Broker
   // client.connect returns a boolean value to let us know if the connection was successful.
@@ -144,16 +142,14 @@ void connect_MQTT(const char* var_mqtt_client, int port_num)
 }
 void send_data_MQTT(String value, const char *topic)
 {
-  //char *mqtt_topic = topic;
-
   //strcpy(mqtt_topic, topic.c_str()); // copying the contents of the string to char array
   if (WiFi.status() == WL_CONNECTED)
   {
     //client.connect(clientID);
     delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
-    if (client.publish(topic, String(value).c_str()))
-    {                        // PUBLISH to the MQTT Broker (topic was defined at the beginning)
-      Serial.println(value); //To allow debugging a serial output is written if the measurment was published succesfully.
+    if (client.publish(topic, String(value).c_str())) // PUBLISH to the MQTT Broker (topic was defined at the beginning)
+    {                        
+      Serial.print(value); //To allow debugging a serial output is written if the measurment was published succesfully.
       Serial.print(" sent!");
     }
     // Again, client.publish will return a boolean value depending on whether it succeded or not.
@@ -161,7 +157,7 @@ void send_data_MQTT(String value, const char *topic)
     else
     {
       Serial.println(value);
-      Serial.print(" failed to send. Reconnecting to MQTT Broker and trying again");
+      Serial.println(" failed to send. Reconnecting to MQTT Broker and trying again");
       client.connect(clientID);
       delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
       client.publish(topic, String(value).c_str());
@@ -405,7 +401,6 @@ void loop()
     connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
     delay(500);
     connect_MQTT(mqtt_server_2, 1883);
-    delay(500);
   }
   unsigned long now = millis();
   if (now - lastLoop1 > 5000)
@@ -418,7 +413,7 @@ void loop()
     measure_pressure();
     delay(50);
     read_dallas();
-    delay(100); //Short delay to finish up all calculations before going to DeepSleep
+    delay(50); //Short delay to finish up all calculations before going to DeepSleep
     //Serial.print("Disconnecting from MQTT Broker");
     //client.disconnect(); // disconnect from the MQTT broker
     //delay(1000);          //Short delay to finish up all calculations before going to DeepSleep
