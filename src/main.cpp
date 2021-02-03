@@ -63,9 +63,9 @@ const char *humidity_bme280_topic_1 = "aeroponic/growtent1/humidity/bme280/senso
 //const char *humidity_bme280_topic_2 = "aeroponic/growtent1/humidity/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *pressure_bme280_topic_1 = "aeroponic/growtent1/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 //const char *pressure_bme280_topic_2 = "aeroponic/growtent1/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *temp_ds18b20_topic_1 = "aeroponic/growtent1/temperatur/d18b20/sensor1";   //Adds MQTT topic for the dallas sensor 1 in the root zone
-const char *temp_ds18b20_topic_2 = "aeroponic/growtent1/temperatur/d18b20/sensor2";   //Adds MQTT topic for the dallas senssor 2
-const char *temp_ds18b20_topic_3 = "aeroponic/growtent1/temperatur/d18b20/sensor3";   //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
+const char *temp_ds18b20_topic_1 = "aeroponic/growtent1/temperature/d18b20/sensor1";   //Adds MQTT topic for the dallas sensor 1 in the root zone
+const char *temp_ds18b20_topic_2 = "aeroponic/growtent1/temperature/d18b20/sensor2";   //Adds MQTT topic for the dallas senssor 2
+const char *temp_ds18b20_topic_3 = "aeroponic/growtent1/temperature/d18b20/sensor3";   //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
 const char *pH_ezo_topic_1 = "aeroponic/growtent1/ph/ezo_circuit/sensor1";            //Adds MQTT topic for the AtlasScientific pH probe
 const char *pH_command_topic = "aeroponic/growtent1/pH/AtlasScientific/command";  //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 const char *mqtt_connection_topic = "aeroponic/growtent1/connection/table1";          //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
@@ -78,8 +78,8 @@ unsigned long lastLoop1 = 0;            //Needed for the millis() loop function
 unsigned long lastLoop2 = 0;            //Needed for the millis() loop function
 unsigned long pHLoop = 0;               //Needed for the millis() of the pH Function to check if 5 minutes are
 
-WiFiClient espClient;                                // Initialise the WiFi and MQTT Client objects
-PubSubClient client(mqtt_server_1, 1883, espClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
+WiFiClient wifiClient;                                // Initialise the WiFi and MQTT Client objects
+PubSubClient client(mqtt_server_1, 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
 
 void connect_wifi(const char *var_ssid, const char *var_wifi_password)
 {
@@ -123,7 +123,8 @@ void connect_MQTT(const char* var_mqtt_client, int port_num)
   //clientId += String(random(0xffff), HEX);
   //PubSubClient client(espClient);
   //client.setServer(mqtt_server_1, 1883);
-  PubSubClient client(var_mqtt_client, port_num, espClient); // 1883 is the listener port for the Broker
+   client.setServer(var_mqtt_client, port_num);
+  PubSubClient client(var_mqtt_client, port_num, wifiClient); // 1883 is the listener port for the Broker
   // Connect to MQTT Broker
   // client.connect returns a boolean value to let us know if the connection was successful.
   // If the connection is failing, make sure you are using the correct MQTT Username and Password (Setup Earlier in the Instructable)
@@ -148,6 +149,8 @@ void send_data_MQTT(String value, const char *topic)
   //strcpy(mqtt_topic, topic.c_str()); // copying the contents of the string to char array
   if (WiFi.status() == WL_CONNECTED)
   {
+    //client.connect(clientID);
+    delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
     if (client.publish(topic, String(value).c_str()))
     {                        // PUBLISH to the MQTT Broker (topic was defined at the beginning)
       Serial.println(value); //To allow debugging a serial output is written if the measurment was published succesfully.
@@ -358,7 +361,7 @@ void read_dallas()
         send_data_MQTT(temp_dallas, temp_ds18b20_topic_2);
         Serial.println(temp_dallas + " of sensor" + i +"sent!"); //To allow debugging a serial output is written if the measurment was published succesfully.
       }
-     if (i == 2 && client.publish(temp_ds18b20_topic_3, String(temp_dallas).c_str()))
+     if (i == 2)
       {
         //client.publish(temp_ds18b20_topic_1, String(temp_dallas).c_str()); // PUBLISH to the MQTT Broker (topic was defined at the beginning)
         //client.publish(temp_ds18b20_topic_2, String(temp_dallas).c_str());
@@ -401,7 +404,7 @@ void loop()
   {
     connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
     delay(500);
-    connect_MQTT(mqtt_server_1, 1883);
+    connect_MQTT(mqtt_server_2, 1883);
     delay(500);
   }
   unsigned long now = millis();
