@@ -56,7 +56,7 @@ Adafruit_Sensor *bme_humidity = bme.getHumiditySensor(); //Gets humidity value f
 // MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
 const char *mqtt_server_1 = "192.168.0.30";    //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-const char *mqtt_server_2 = "192.168.178.40";                                     //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server_2 = "192.168.178.30";                                     //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 const char *temp_bme280_topic_1 = "aeroponic/growtent1/temperatur/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 //const char *temp_bme280_topic_2 = "aeroponic/growtent1/temperatur/bme280/sensor2";   //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *humidity_bme280_topic_1 = "aeroponic/growtent1/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
@@ -399,18 +399,15 @@ void loop()
 { //This function will continously be executed; everything which needs to be done recurringly is set here.
   if (WiFi.status() != WL_CONNECTED)
   {
-    //connect_wifi("Hood Lan", "Ja17081994Yp08091992");
-    //connect_MQTT(mqtt_server_1, 1883);
-    delay(100);
+    connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
+    delay(500);
+    connect_MQTT(mqtt_server_1, 1883);
+    delay(500);
   }
   unsigned long now = millis();
-  if (now - lastLoop1 > 15000)
+  if (now - lastLoop1 > 5000)
   {
     lastLoop1 = now;
-    connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
-    delay(1000);
-    connect_MQTT(mqtt_server_1, 1883);
-    delay(50);
     measure_temp();
     delay(50);
     measure_humidity();
@@ -419,19 +416,19 @@ void loop()
     delay(50);
     read_dallas();
     delay(100); //Short delay to finish up all calculations before going to DeepSleep
-    Serial.print("Disconnecting from MQTT Broker");
-    client.disconnect(); // disconnect from the MQTT broker
-    delay(1000);          //Short delay to finish up all calculations before going to DeepSleep
+    //Serial.print("Disconnecting from MQTT Broker");
+    //client.disconnect(); // disconnect from the MQTT broker
+    //delay(1000);          //Short delay to finish up all calculations before going to DeepSleep
     //Serial.print("Disconnecting from WiFi");
     //WiFi.disconnect(); // Disconnects the wifi safely
   }
-  if (now - lastLoop2 > 15000)
+  /*if (now - lastLoop2 > 15000)
   {
     lastLoop2 = now;
     //Serial.print("Skipping Connecton 2 for now");
     //connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
     delay(1000);
-    connect_MQTT(mqtt_server_2, 1883);
+    //connect_MQTT(mqtt_server_2, 1883);
     delay(50);
     measure_temp();
     delay(50);
@@ -444,7 +441,7 @@ void loop()
     client.disconnect(); // disconnect from the MQTT broker
     delay(1000);          //Short delay to finish up all calculations before going to DeepSleep
     //WiFi.disconnect();   // Disconnects the wifi safely
-  }
+  }*/
 
   /*if (now - pHLoop > 300000)
   {
