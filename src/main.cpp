@@ -131,8 +131,7 @@ void connect_MQTT(const char* var_mqtt_client, int port_num)
     Serial.println("Connected to MQTT Broker!");
     //MQTT Topics to subscribe to for functioning. Structure as follows: project/location/type/number
     //Following are test topics
-    //client.subscribe(tempsensor1_topic);
-    delay(100);
+    //delay(100);
     //client.publish(mqtt_connection_topic_1, "on");
   }
   else
@@ -145,8 +144,6 @@ void send_data_MQTT(String value, const char *topic)
   //strcpy(mqtt_topic, topic.c_str()); // copying the contents of the string to char array
   if (WiFi.status() == WL_CONNECTED)
   {
-    //client.connect(clientID);
-    delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
     if (client.publish(topic, String(value).c_str())) // PUBLISH to the MQTT Broker (topic was defined at the beginning)
     {                        
       Serial.print(value); //To allow debugging a serial output is written if the measurment was published succesfully.
