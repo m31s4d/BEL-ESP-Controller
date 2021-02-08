@@ -43,6 +43,11 @@ float bme280_pressure = 0; //Sets variable bme_pressure to pressure measire of B
 float bme280_altitude = 0; //Sets the altitutde variable bme_altitutde to zero
 //float bme280_altitude2 = 0; //Sets the altitutde variable bme_altitutde to zero
 
+//Initialization of all environmental variables as global to share them between functions
+String bme280_temp_string;     //Sets the variable temp to the temp measure of the BME280
+String bme280_humidity_string; //Sets variable bme_humidity to humidity measure of BME280
+String bme280_pressure_string; //Sets variable bme_pressure to pressure measire of BME280
+String bme280_altitude_string; //Sets the altitutde variable bme_altitutde to zero
 //Adafruit_BMP280 bmp; // use I2C interface
 Adafruit_BME280 bme; // Create BME280 instance for the first sensor
 //Adafruit_BME280 bme2;                                      // Create BME280 Instance for the second sensor
@@ -150,13 +155,13 @@ void send_data_MQTT(String value, const char *topic)
     if (client.publish(topic, String(value).c_str())) // PUBLISH to the MQTT Broker (topic was defined at the beginning)
     {                        
       Serial.print(value); //To allow debugging a serial output is written if the measurment was published succesfully.
-      Serial.print(" sent!");
+      Serial.println(" sent!");
     }
     // Again, client.publish will return a boolean value depending on whether it succeded or not.
     // If the message failed to send, we will try again, as the connection may have broken.
     else
     {
-      Serial.println(value);
+      Serial.print(value);
       Serial.println(" failed to send. Reconnecting to MQTT Broker and trying again");
       client.connect(clientID);
       delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
@@ -165,8 +170,16 @@ void send_data_MQTT(String value, const char *topic)
   }
 }
 /*void measure_soil(){
-  sensorValue = analogRead(analogInPin);// read the analog in value:
+  //# the approximate moisture levels for the sensor reading
+//# 0 to 300 dry soil
+//# 300 to 700 humid soil
+//# 700 to 950 in water
+//#define sensorPin A0
+  double sensorValue = analogRead(sensorPin); // read the analog in value:
+  sensorValue = map(sensorValue, 1024, 0, 0, 100);
+  Serial.print("Moisture : ");
   Serial.println(sensorValue); //Prints out the value of the soil sensor to check if it is wired correctly
+  Serial.println("%");
 }*/
 /*void measure_distance_ultrasonic(){
 int trigger=D7;                        // Der Trigger Pin
@@ -196,21 +209,19 @@ void measure_temp()
   //bme280_humidity = humidity_event.relative_humidity; //Sets variable bme_humidity to humidity measure of BME280
   //bme280_pressure = pressure_event.pressure; //Sets variable bme_pressure to pressure measire of BME280
   //float bme280_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
-  String temp = String((float)bme280_temp); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
+  bme280_temp_string = String((float)bme280_temp); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //String humi=String((float)bme280_humidity); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //String press=String((float)bme280_pressure); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //String alti=String((float)bme280_altitude); //Important to change the value of the variable to a string
-  //MQTT can only transmit strings
-  send_data_MQTT(temp, temp_bme280_topic_1);
 }
 void measure_humidity()
 {
   sensors_event_t /*temp_event, pressure_event,*/ humidity_event; //Initialization of the sensor events to use them later
   bme_humidity->getEvent(&humidity_event);
   bme280_humidity = bme.readHumidity();         //Sets variable bme_humidity to humidity measure of BME280
-  String humi = String((float)bme280_humidity); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
+  bme280_humidity_string = String((float)bme280_humidity); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //MQTT can only transmit strings
-  send_data_MQTT(humi, humidity_bme280_topic_1);
+  //send_data_MQTT(humi, humidity_bme280_topic_1);
 }
 void measure_pressure()
 {
@@ -219,9 +230,9 @@ void measure_pressure()
   bme_pressure->getEvent(&pressure_event);
   bme280_pressure = bme.readPressure(); //Sets variable bme_pressure to pressure measire of BME280
   //bme280_pressure = pressure_event.pressure;     //Sets variable bme_pressure to pressure measire of BME280
-  String press = String((float)bme280_pressure); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
+  bme280_pressure_string= String((float)bme280_pressure); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //MQTT can only transmit strings
-  send_data_MQTT(press, pressure_bme280_topic_1);
+  //send_data_MQTT(press, pressure_bme280_topic_1);
 }
 /*void measure_altitude()
 {
@@ -403,22 +414,27 @@ void loop()
     connect_MQTT(mqtt_server_2, 1883);
   }
   unsigned long now = millis();
-  if (now - lastLoop1 > 5000)
+  if ((now - lastLoop1) > 5000)
   {
     lastLoop1 = now;
     measure_temp();
-    delay(50);
     measure_humidity();
-    delay(50);
     measure_pressure();
-    delay(50);
     read_dallas();
-    delay(50); //Short delay to finish up all calculations before going to DeepSleep
+  
     //Serial.print("Disconnecting from MQTT Broker");
     //client.disconnect(); // disconnect from the MQTT broker
     //delay(1000);          //Short delay to finish up all calculations before going to DeepSleep
     //Serial.print("Disconnecting from WiFi");
     //WiFi.disconnect(); // Disconnects the wifi safely
+    if(client.connected()){
+      send_data_MQTT(bme280_pressure_string, pressure_bme280_topic_1);
+      send_data_MQTT(bme280_temp_string, temp_bme280_topic_1);
+      send_data_MQTT(bme280_humidity_string, humidity_bme280_topic_1);
+    }else{
+      Serial.print("Connection to MQTT broker lost/broken! Retrying connection");
+      //connect_MQTT(mqtt_server_2, 1883);
+    }
   }
   /*if (now - lastLoop2 > 15000)
   {
