@@ -34,13 +34,13 @@ DallasTemperature dallassensors(&oneWire); // Pass our oneWire reference to Dall
 DeviceAddress tempDeviceAddress;           // We'll use this variable to store a found device address for the DS18B20
 
 //Initialization of all environmental variables as global to share them between functions
-float bme280_temp; //Sets the variable temp to the temp measure of the BME280
+float bme280_temp;     //Sets the variable temp to the temp measure of the BME280
 float bme280_humidity; //Sets variable bme_humidity to humidity measure of BME280
 float bme280_pressure; //Sets variable bme_pressure to pressure measire of BME280
 float bme280_altitude; //Sets the altitutde variable bme_altitutde to zero
-float dallas_temp_0; //Sets variable for the first DS18B20 found on the bus
-float dallas_temp_1; //Sets variable for the first DS18B20 found on the bus
-float dallas_temp_2; //Sets variable for the first DS18B20 found on the bus
+float dallas_temp_0;   //Sets variable for the first DS18B20 found on the bus
+float dallas_temp_1;   //Sets variable for the first DS18B20 found on the bus
+float dallas_temp_2;   //Sets variable for the first DS18B20 found on the bus
 //Initialization of all environmental variables as global to share them between functions
 String bme280_temp_string;     //Sets the variable temp to the temp measure of the BME280
 String bme280_humidity_string; //Sets variable bme_humidity to humidity measure of BME280
@@ -62,28 +62,28 @@ Adafruit_Sensor *bme_humidity = bme.getHumiditySensor(); //Gets humidity value f
 
 // MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
-const char *mqtt_server_1 = "192.168.0.30";    //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-const char *mqtt_server_2 = "192.168.178.30";                                     //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server_1 = "192.168.0.30";                                        //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server_2 = "192.168.178.30";                                      //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 const char *temp_bme280_topic_1 = "aeroponic/growtent1/temperatur/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 //const char *temp_bme280_topic_2 = "aeroponic/growtent1/temperatur/bme280/sensor2";   //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *humidity_bme280_topic_1 = "aeroponic/growtent1/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 //const char *humidity_bme280_topic_2 = "aeroponic/growtent1/humidity/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *pressure_bme280_topic_1 = "aeroponic/growtent1/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 //const char *pressure_bme280_topic_2 = "aeroponic/growtent1/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *temp_ds18b20_topic_1 = "aeroponic/growtent1/temperature/d18b20/sensor1";   //Adds MQTT topic for the dallas sensor 1 in the root zone
-const char *temp_ds18b20_topic_2 = "aeroponic/growtent1/temperature/d18b20/sensor2";   //Adds MQTT topic for the dallas senssor 2
-const char *temp_ds18b20_topic_3 = "aeroponic/growtent1/temperature/d18b20/sensor3";   //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
-const char *pH_ezo_topic_1 = "aeroponic/growtent1/ph/ezo_circuit/sensor1";            //Adds MQTT topic for the AtlasScientific pH probe
-const char *pH_command_topic = "aeroponic/growtent1/pH/AtlasScientific/command";  //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
-const char *mqtt_connection_topic = "aeroponic/growtent1/connection/table1";          //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
+const char *temp_ds18b20_topic_1 = "aeroponic/growtent1/temperature/d18b20/sensor1"; //Adds MQTT topic for the dallas sensor 1 in the root zone
+const char *temp_ds18b20_topic_2 = "aeroponic/growtent1/temperature/d18b20/sensor2"; //Adds MQTT topic for the dallas senssor 2
+const char *temp_ds18b20_topic_3 = "aeroponic/growtent1/temperature/d18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
+const char *pH_ezo_topic_1 = "aeroponic/growtent1/ph/ezo_circuit/sensor1";           //Adds MQTT topic for the AtlasScientific pH probe
+const char *pH_command_topic = "aeroponic/growtent1/pH/AtlasScientific/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+const char *mqtt_connection_topic = "aeroponic/growtent1/connection/table1";         //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 //const char* mqtt_username = "cdavid"; //if MQTT server needs credentials they need to be added in the next two lines
 //const char* mqtt_password = "cdavid";
 
 const char *clientID = "ESP-Table_Test"; // The client id identifies the ESP8266 device. In this experiment we will use ESP-Table_X-Y (X = Table No, Y = Microcontroller No) Think of it a bit like a hostname (Or just a name, like Greg).
-unsigned long noLoop = 0;               //Needed for the deepsleep loop function
-unsigned long lastLoop1 = 0;            //Needed for the millis() loop function
-unsigned long lastLoop2 = 0;            //Needed for the millis() loop function
-unsigned long pHLoop = 0;               //Needed for the millis() of the pH Function to check if 5 minutes are over
+unsigned long noLoop = 0;                //Needed for the deepsleep loop function
+unsigned long lastLoop1 = 0;             //Needed for the millis() loop function
+unsigned long lastLoop2 = 0;             //Needed for the millis() loop function
+unsigned long pHLoop = 0;                //Needed for the millis() of the pH Function to check if 5 minutes are over
 
 WiFiClient wifiClient;                                // Initialise the WiFi and MQTT Client objects
 PubSubClient client(mqtt_server_1, 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
@@ -118,12 +118,12 @@ void connect_wifi(const char *var_ssid, const char *var_wifi_password)
   Serial.print("ClientID: ");
   Serial.println(clientID);
 }
-void connect_MQTT(const char* var_mqtt_client, int port_num)
+void connect_MQTT(const char *var_mqtt_client, int port_num)
 { //Defines a function "connect_MQTT" which includes all necessary steps to connect the ESP with the server
   // Create a random client ID
   //String clientId = "SEED-";
   //clientId += String(random(0xffff), HEX);
-  client.setServer(var_mqtt_client, port_num); //Important to set the MQTT Server in each connection call, otherwise a connection will not be successful
+  client.setServer(var_mqtt_client, port_num);                //Important to set the MQTT Server in each connection call, otherwise a connection will not be successful
   PubSubClient client(var_mqtt_client, port_num, wifiClient); // 1883 is the listener port for the Broker
   // Connect to MQTT Broker
   // client.connect returns a boolean value to let us know if the connection was successful.
@@ -147,7 +147,7 @@ void send_data_MQTT(String value, const char *topic)
   if (WiFi.status() == WL_CONNECTED)
   {
     if (client.publish(topic, String(value).c_str())) // PUBLISH to the MQTT Broker (topic was defined at the beginning)
-    {                        
+    {
       Serial.print(value); //To allow debugging a serial output is written if the measurment was published succesfully.
       Serial.println("sent to topic:");
       Serial.println(topic);
@@ -213,7 +213,7 @@ void measure_humidity()
 {
   sensors_event_t /*temp_event, pressure_event,*/ humidity_event; //Initialization of the sensor events to use them later
   bme_humidity->getEvent(&humidity_event);
-  bme280_humidity = bme.readHumidity();         //Sets variable bme_humidity to humidity measure of BME280
+  bme280_humidity = bme.readHumidity();                    //Sets variable bme_humidity to humidity measure of BME280
   bme280_humidity_string = String((float)bme280_humidity); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //MQTT can only transmit strings
   //send_data_MQTT(humi, humidity_bme280_topic_1);
@@ -225,7 +225,7 @@ void measure_pressure()
   bme_pressure->getEvent(&pressure_event);
   bme280_pressure = bme.readPressure(); //Sets variable bme_pressure to pressure measire of BME280
   //bme280_pressure = pressure_event.pressure;     //Sets variable bme_pressure to pressure measire of BME280
-  bme280_pressure_string= String((float)bme280_pressure); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
+  bme280_pressure_string = String((float)bme280_pressure); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
   //MQTT can only transmit strings
   //send_data_MQTT(press, pressure_bme280_topic_1);
 }
@@ -326,41 +326,40 @@ void read_dallas()
     {
       if (i == 0)
       {
-      // Output the device ID
-      Serial.print("Temperature for device: ");
-      Serial.println(i, DEC);
+        // Output the device ID
+        Serial.print("Temperature for device: ");
+        Serial.println(i, DEC);
 
-      // Print the data
-      dallas_temp_0 = dallassensors.getTempC(tempDeviceAddress);
-      dallas_temp_0_string = String((float)dallas_temp_0); //Important to change the value of the variable to a string
-      Serial.print("Temp C: ");
-      Serial.print(dallas_temp_0);
-      Serial.println(dallas_temp_0_string + " of sensor" + i); //To allow debugging a serial output is written if the measurment was published succesfully.
+        // Print the data
+        dallas_temp_0 = dallassensors.getTempC(tempDeviceAddress);
+        dallas_temp_0_string = String((float)dallas_temp_0); //Important to change the value of the variable to a string
+        Serial.print("Temp C: ");
+        Serial.print(dallas_temp_0);
+        Serial.println(dallas_temp_0_string + " of sensor" + i); //To allow debugging a serial output is written if the measurment was published succesfully.
       }
       // Again, client.publish will return a boolean value depending on whether it succeded or not.
       // If the message failed to send, we will try again, as the connection may have broken.
       if (i == 1)
       {
-       // Output the device ID
-      Serial.print("Temperature for device: ");
-      Serial.println(i, DEC);
+        // Output the device ID
+        Serial.print("Temperature for device: ");
+        Serial.println(i, DEC);
 
-      // Print the data
-      dallas_temp_1 = dallassensors.getTempC(tempDeviceAddress);
-      dallas_temp_1_string = String((float)dallas_temp_1); //Important to change the value of the variable to a string
-      Serial.println(dallas_temp_1_string + " of sensor" + i +"received!"); //To allow debugging a serial output is written if the measurment was published succesfully.
+        // Print the data
+        dallas_temp_1 = dallassensors.getTempC(tempDeviceAddress);
+        dallas_temp_1_string = String((float)dallas_temp_1);                   //Important to change the value of the variable to a string
+        Serial.println(dallas_temp_1_string + " of sensor" + i + "received!"); //To allow debugging a serial output is written if the measurment was published succesfully.
       }
-     if (i == 2)
+      if (i == 2)
       {
-          // Output the device ID
-      Serial.print("Temperature for device: ");
-      Serial.println(i, DEC);
+        // Output the device ID
+        Serial.print("Temperature for device: ");
+        Serial.println(i, DEC);
 
-      // Print the data
-      dallas_temp_2 = dallassensors.getTempC(tempDeviceAddress);
-      dallas_temp_2_string = String((float)dallas_temp_2); //Important to change the value of the variable to a string
-      Serial.println(dallas_temp_2_string + " of sensor" + i +"received!"); //To allow debugging a serial output is written if the measurment was published succesfully.
-      
+        // Print the data
+        dallas_temp_2 = dallassensors.getTempC(tempDeviceAddress);
+        dallas_temp_2_string = String((float)dallas_temp_2);                   //Important to change the value of the variable to a string
+        Serial.println(dallas_temp_2_string + " of sensor" + i + "received!"); //To allow debugging a serial output is written if the measurment was published succesfully.
       }
     }
     //float temperatureC = dallassensors.getTempCByIndex(0); //Adds the value of the 0 device of temperature to the variable tempc
@@ -407,56 +406,38 @@ void loop()
     //delay(1000);          //Short delay to finish up all calculations before going to DeepSleep
     //Serial.print("Disconnecting from WiFi");
     //WiFi.disconnect(); // Disconnects the wifi safely
-    if(client.connected()){
+    if (!client.connected())
+    {
+      Serial.print("Connection to MQTT broker lost/broken! Retrying connection");
+      connect_MQTT(mqtt_server_2, 1883);
+    }
+    else
+    {
       send_data_MQTT(bme280_pressure_string, pressure_bme280_topic_1);
       send_data_MQTT(bme280_temp_string, temp_bme280_topic_1);
       send_data_MQTT(bme280_humidity_string, humidity_bme280_topic_1);
       send_data_MQTT(dallas_temp_0_string, temp_ds18b20_topic_1);
       send_data_MQTT(dallas_temp_1_string, temp_ds18b20_topic_2);
       send_data_MQTT(dallas_temp_2_string, temp_ds18b20_topic_3);
-      send_data_MQTT(atlas_scientific_ph_string, pH_ezo_topic_1);
-    }else{
-      Serial.print("Connection to MQTT broker lost/broken! Retrying connection");
-      //connect_MQTT(mqtt_server_2, 1883);
     }
   }
-  /*if (now - lastLoop2 > 15000)
-  {
-    lastLoop2 = now;
-    //Serial.print("Skipping Connecton 2 for now");
-    //connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
-    delay(1000);
-    //connect_MQTT(mqtt_server_2, 1883);
-    delay(50);
-    measure_temp();
-    delay(50);
-    measure_humidity();
-    delay(50);
-    measure_pressure();
-    delay(50);
-    read_dallas();
-    delay(100);          //Short delay to finish up all calculations before going to DeepSleep
-    client.disconnect(); // disconnect from the MQTT broker
-    delay(1000);          //Short delay to finish up all calculations before going to DeepSleep
-    //WiFi.disconnect();   // Disconnects the wifi safely
-  }*/
-
   /*if (now - pHLoop > 300000)
   {
     pHLoop = now;
-    //connect_wifi_1();
-    //connect_MQTT_1();
-    delay(50);
     measure_pH("reading");
+    if (!client.connected())
+    {
+      Serial.print("Connection to MQTT broker lost/broken! Retrying connection");
+      connect_MQTT(mqtt_server_2, 1883);
+    }
+    else
+    {
+      send_data_MQTT(atlas_scientific_ph_string, pH_ezo_topic_1);
+    }
     delay(50);
     measure_pH("sleep");
-    Serial.print("Disconnecting from MQTT Broker");
-    client.disconnect(); // disconnect from the MQTT broker
-    delay(100);          //Short delay to finish up all calculations before going to DeepSleep
-    Serial.print("Disconnecting from WiFi");
-    WiFi.disconnect(); // Disconnects the wifi safely
   }*/
- // client.loop();
+  // client.loop();
 }
 
 /*void callback(char *topic, byte *payload, unsigned int length)
