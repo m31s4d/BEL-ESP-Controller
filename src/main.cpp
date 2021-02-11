@@ -26,8 +26,7 @@ byte ph_counter = 0;                //counter used for ph_data array.
 int time_ph = 815;                  //used to change the delay needed depending on the command sent to the EZO Class pH Circuit.
 float atlas_scientific_ph;          //float var used to hold the float value of the pH.
 
-#define ec_address 100              //default I2C ID number for EZO EC Circuit.
-
+#define ec_address 100 //default I2C ID number for EZO EC Circuit.
 
 char *ec;  //char pointer used in string parsing.
 char *tds; //char pointer used in string parsing.
@@ -315,14 +314,14 @@ void measure_pressure()
 }*/
 void measure_EC(String cmd_code)
 {
-  char ec_computerdata[20];           //we make a 20 byte character array to hold incoming data from a pc/mac/other.
-byte ec_received_from_computer = 0; //we need to know how many characters have been received.
-byte serial_event = 0;              //a flag to signal when data has been received from the pc/mac/other.
-byte ec_response_code = 0;          //used to hold the I2C response code.
-char ec_data[32];                   //we make a 32 byte character array to hold incoming data from the EC circuit.
-byte ec_in_char = 0;                //used as a 1 byte buffer to store inbound bytes from the EC Circuit.
-byte ec_counter = 0;                //counter used for ec_data array.
-int time_ec = 570;                  //used to change the delay needed depending on the command sent to the EZO Class EC Circuit.
+  char ec_computerdata[20];                  //we make a 20 byte character array to hold incoming data from a pc/mac/other.
+  byte ec_received_from_computer = 0;        //we need to know how many characters have been received.
+  byte serial_event = 0;                     //a flag to signal when data has been received from the pc/mac/other.
+  byte ec_response_code = 0;                 //used to hold the I2C response code.
+  char ec_data[32];                          //we make a 32 byte character array to hold incoming data from the EC circuit.
+  byte ec_in_char = 0;                       //used as a 1 byte buffer to store inbound bytes from the EC Circuit.
+  byte ec_counter = 0;                       //counter used for ec_data array.
+  int time_ec = 570;                         //used to change the delay needed depending on the command sent to the EZO Class EC Circuit.
   int ec_code_length = cmd_code.length();    //Gets the length of the string to be used in the for loop later
   strcpy(ec_computerdata, cmd_code.c_str()); // copying the contents of the string to char array
   for (int i = 0; i <= ec_received_from_computer; i++)
@@ -381,16 +380,17 @@ int time_ec = 570;                  //used to change the delay needed depending 
     Serial.println();        //this just makes the output easier to read by adding an extra blank line
   }
 
-  if (ec_computerdata[0] == 'r') ec_string_pars(ec_data); //uncomment this function if you would like to break up the comma separated string into its individual parts.
+  if (ec_computerdata[0] == 'r')
+    ec_string_pars(ec_data); //uncomment this function if you would like to break up the comma separated string into its individual parts.
 }
-void ec_string_pars(char* ec_data_pars)
+void ec_string_pars(char *ec_data_pars)
 { //this function will break up the CSV string into its 4 individual parts. EC|TDS|SAL|SG.
   //this is done using the C command “strtok”.
 
   ec = strtok(ec_data_pars, ","); //let's pars the string at each comma.
-  tds = strtok(NULL, ",");   //let's pars the string at each comma.
-  sal = strtok(NULL, ",");   //let's pars the string at each comma.
-  sg = strtok(NULL, ",");    //let's pars the string at each comma.
+  tds = strtok(NULL, ",");        //let's pars the string at each comma.
+  sal = strtok(NULL, ",");        //let's pars the string at each comma.
+  sg = strtok(NULL, ",");         //let's pars the string at each comma.
 
   Serial.print("EC:"); //we now print each value we parsed separately.
   Serial.println(ec);  //this is the EC value.
