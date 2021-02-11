@@ -27,6 +27,15 @@ int time_ph = 815;                  //used to change the delay needed depending 
 float atlas_scientific_ph;          //float var used to hold the float value of the pH.
 
 #define ec_address 100 //default I2C ID number for EZO EC Circuit.
+char ec_computerdata[20];                  //we make a 20 byte character array to hold incoming data from a pc/mac/other.
+  byte ec_received_from_computer = 0;        //we need to know how many characters have been received.
+  byte serial_event = 0;                     //a flag to signal when data has been received from the pc/mac/other.
+  byte ec_response_code = 0;                 //used to hold the I2C response code.
+  char ec_data[32];                          //we make a 32 byte character array to hold incoming data from the EC circuit.
+  byte ec_in_char = 0;                       //used as a 1 byte buffer to store inbound bytes from the EC Circuit.
+  byte ec_counter = 0;                       //counter used for ec_data array.
+  int time_ec = 570;                         //used to change the delay needed depending on the command sent to the EZO Class EC Circuit.
+ 
 
 char *ec;  //char pointer used in string parsing.
 char *tds; //char pointer used in string parsing.
@@ -312,17 +321,9 @@ void measure_pressure()
   atlas_scientific_ph = atof(ph_data);                           //Converts the array to a float value which we will send via MQTT
   String pH_string = String((float)atlas_scientific_ph);         //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
 }*/
-void measure_EC(String cmd_code)
+/*void measure_EC(String cmd_code)
 {
-  char ec_computerdata[20];                  //we make a 20 byte character array to hold incoming data from a pc/mac/other.
-  byte ec_received_from_computer = 0;        //we need to know how many characters have been received.
-  byte serial_event = 0;                     //a flag to signal when data has been received from the pc/mac/other.
-  byte ec_response_code = 0;                 //used to hold the I2C response code.
-  char ec_data[32];                          //we make a 32 byte character array to hold incoming data from the EC circuit.
-  byte ec_in_char = 0;                       //used as a 1 byte buffer to store inbound bytes from the EC Circuit.
-  byte ec_counter = 0;                       //counter used for ec_data array.
-  int time_ec = 570;                         //used to change the delay needed depending on the command sent to the EZO Class EC Circuit.
-  int ec_code_length = cmd_code.length();    //Gets the length of the string to be used in the for loop later
+   int ec_code_length = cmd_code.length();    //Gets the length of the string to be used in the for loop later
   strcpy(ec_computerdata, cmd_code.c_str()); // copying the contents of the string to char array
   for (int i = 0; i <= ec_received_from_computer; i++)
   {                                                   //set all char to lower case, this is just so this exact sample code can recognize the "sleep" command.
@@ -406,13 +407,13 @@ void ec_string_pars(char *ec_data_pars)
   Serial.println();    //this just makes the output easier to read by adding an extra blank line
 
   //uncomment this section if you want to take the values and convert them into floating point number.
-  /*  
+  
     ec_float=atof(ec);
     tds_float=atof(tds);
     sal_float=atof(sal);
     sg_float=atof(sg);
-*/
-}
+
+}*/
 //void ph_serialevent()
 //{                                                                       //this interrupt will trigger when the data coming from the serial monitor(pc/mac/other) is received.
 //received_from_computer = Serial.readBytesUntil(13, computerdata, 20); //we read the data sent from the serial monitor(pc/mac/other) until we see a <CR>. We also count how many characters have been received.
