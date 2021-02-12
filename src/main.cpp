@@ -96,8 +96,8 @@ const char *soil_moisture_topic = "aeroponic/growtent2/soil_moisture/sensor1";  
 String nameBuffer = "BEL-Ponic-" + String(random(0xffff), HEX); // Create a random client ID
 const char *clientID = nameBuffer.c_str();
 //const char *clientID = "ESP-Table1_Test_1"; // The client id identifies the ESP8266 device. In this experiment we will use ESP-Table_X-Y (X = Table No, Y = Microcontroller No) Think of it a bit like a hostname (Or just a name, like Greg).
-unsigned long lastLoop1 = 0; //Needed for the millis() loop function
-unsigned long lastLoop2 = 0; //Needed for the millis() loop function
+unsigned long mainLoop = 0; //Needed for the millis() loop function
+unsigned long soilLoop = 0; //Needed for the millis() loop function
 unsigned long pHLoop = 0;    //Needed for the millis() of the pH Function to check if 5 minutes are over
 
 WiFiClient wifiClient;                                // Initialise the WiFi and MQTT Client objects
@@ -495,16 +495,16 @@ void setup()
 }
 void loop()
 { //This function will continously be executed; everything which needs to be done recurringly is set here.
+  unsigned long now = millis();
   if (WiFi.status() != WL_CONNECTED)
   {
     connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
     delay(500);
     connect_MQTT(mqtt_server_2, 1883);
   }
-  unsigned long now = millis();
-  if ((now - lastLoop1) > 5000)
+  if ((now - mainLoop) > 5000)
   {
-    lastLoop1 = now;
+    mainLoop = now;
     //measure_soil();
     measure_temp();
     measure_humidity();
@@ -523,25 +523,17 @@ void loop()
     send_data_MQTT(dallas_temp_2_string, temp_ds18b20_topic_3);
     //send_data_MQTT(soil_moisture, soil_moisture_topic);
   }
-  if ((now - lastLoop2) > 600000)
+  if ((now - soilLoop) > 600000)
   {
-    lastLoop2 = now;
+    soilLoop = now;
     //measure_soil();
     //send_data_MQTT(soil_moisture, soil_moisture_topic);
   }
-  /*if (now - pHLoop > 300000)
+  /*if (now - pHLoop > 3000000)
   {
     pHLoop = now;
     measure_pH("reading");
-    if (!client.connected())
-    {
-      Serial.print("Connection to MQTT broker lost/broken! Retrying connection");
-      connect_MQTT(mqtt_server_2, 1883);
-    }
-    else
-    {
-      send_data_MQTT(atlas_scientific_ph_string, pH_ezo_topic_1);
-    }
+    send_data_MQTT(atlas_scientific_ph_string, pH_ezo_topic_1);
     delay(50);
     measure_pH("sleep");
   }*/
