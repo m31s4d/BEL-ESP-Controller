@@ -15,6 +15,7 @@ Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Contro
 #include "ESP8266WiFi.h"       // Enables the ESP8266 to connect to the local network (via WiFi)
 #include "PubSubClient.h"      // Allows us to connect to, and publish to the MQTT broker
 
+#define sensorPin A0
 #define pH_address 99               //default I2C ID number for EZO pH Circuit.
 char ph_computerdata[20];           //we make a 20 byte character array to hold incoming data from a pc/mac/other.
 byte ph_received_from_computer = 0; //we need to know how many characters have been received.
@@ -26,16 +27,15 @@ byte ph_counter = 0;                //counter used for ph_data array.
 int time_ph = 815;                  //used to change the delay needed depending on the command sent to the EZO Class pH Circuit.
 float atlas_scientific_ph;          //float var used to hold the float value of the pH.
 
-#define ec_address 100 //default I2C ID number for EZO EC Circuit.
-char ec_computerdata[20];                  //we make a 20 byte character array to hold incoming data from a pc/mac/other.
-  byte ec_received_from_computer = 0;        //we need to know how many characters have been received.
-  byte serial_event = 0;                     //a flag to signal when data has been received from the pc/mac/other.
-  byte ec_response_code = 0;                 //used to hold the I2C response code.
-  char ec_data[32];                          //we make a 32 byte character array to hold incoming data from the EC circuit.
-  byte ec_in_char = 0;                       //used as a 1 byte buffer to store inbound bytes from the EC Circuit.
-  byte ec_counter = 0;                       //counter used for ec_data array.
-  int time_ec = 570;                         //used to change the delay needed depending on the command sent to the EZO Class EC Circuit.
- 
+#define ec_address 100              //default I2C ID number for EZO EC Circuit.
+char ec_computerdata[20];           //we make a 20 byte character array to hold incoming data from a pc/mac/other.
+byte ec_received_from_computer = 0; //we need to know how many characters have been received.
+byte serial_event = 0;              //a flag to signal when data has been received from the pc/mac/other.
+byte ec_response_code = 0;          //used to hold the I2C response code.
+char ec_data[32];                   //we make a 32 byte character array to hold incoming data from the EC circuit.
+byte ec_in_char = 0;                //used as a 1 byte buffer to store inbound bytes from the EC Circuit.
+byte ec_counter = 0;                //counter used for ec_data array.
+int time_ec = 570;                  //used to change the delay needed depending on the command sent to the EZO Class EC Circuit.
 
 char *ec;  //char pointer used in string parsing.
 char *tds; //char pointer used in string parsing.
@@ -71,6 +71,7 @@ String dallas_temp_0_string;       //Variable needed for MQTT transmission of DS
 String dallas_temp_1_string;       //Variable needed for MQTT transmission of DS18B20 measurements
 String dallas_temp_2_string;       //Variable needed for MQTT transmission of DS18B20 measurements
 String atlas_scientific_ph_string; //Variable to store pH value for MQTT transmission
+String soil_moisture;
 
 Adafruit_BME280 bme;                                     // Create BME280 instance for the first sensor
 Adafruit_Sensor *bme_temp = bme.getTemperatureSensor();  //Gets temperature value from the sensor
@@ -81,18 +82,18 @@ Adafruit_Sensor *bme_humidity = bme.getHumiditySensor(); //Gets humidity value f
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
 const char *mqtt_server_1 = "192.168.0.30";                                          //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 const char *mqtt_server_2 = "192.168.178.30";                                        //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-const char *temp_bme280_topic_1 = "aeroponic/growtent1/temperatur/bme280/sensor1";   //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *humidity_bme280_topic_1 = "aeroponic/growtent1/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *pressure_bme280_topic_1 = "aeroponic/growtent1/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *temp_ds18b20_topic_1 = "aeroponic/growtent1/temperature/d18b20/sensor1"; //Adds MQTT topic for the dallas sensor 1 in the root zone
-const char *temp_ds18b20_topic_2 = "aeroponic/growtent1/temperature/d18b20/sensor2"; //Adds MQTT topic for the dallas senssor 2
-const char *temp_ds18b20_topic_3 = "aeroponic/growtent1/temperature/d18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
-const char *pH_ezo_topic_1 = "aeroponic/growtent1/ph/ezo_circuit/sensor1";           //Adds MQTT topic for the AtlasScientific pH probe
-const char *pH_command_topic = "aeroponic/growtent1/pH/AtlasScientific/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
-const char *mqtt_connection_topic = "aeroponic/growtent1/connection/sensor1";        //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
+const char *temp_bme280_topic_1 = "aeroponic/growtent2/temperatur/bme280/sensor1";   //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *humidity_bme280_topic_1 = "aeroponic/growtent2/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *pressure_bme280_topic_1 = "aeroponic/growtent2/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *temp_ds18b20_topic_1 = "aeroponic/growtent2/temperature/d18b20/sensor1"; //Adds MQTT topic for the dallas sensor 1 in the root zone
+const char *temp_ds18b20_topic_2 = "aeroponic/growtent2/temperature/d18b20/sensor2"; //Adds MQTT topic for the dallas senssor 2
+const char *temp_ds18b20_topic_3 = "aeroponic/growtent2/temperature/d18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
+const char *pH_ezo_topic_1 = "aeroponic/growtent2/ph/ezo_circuit/sensor1";           //Adds MQTT topic for the AtlasScientific pH probe
+const char *pH_command_topic = "aeroponic/growtent2/pH/AtlasScientific/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+const char *mqtt_connection_topic = "aeroponic/growtent2/connection/sensor1";        //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
+const char *soil_moisture_topic = "aeroponic/growtent2/soil_moisture/sensor1";       //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 
-// Create a random client ID
-String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId());
+String nameBuffer = "BEL-Ponic-" + String(random(0xffff), HEX); // Create a random client ID
 const char *clientID = nameBuffer.c_str();
 //const char *clientID = "ESP-Table1_Test_1"; // The client id identifies the ESP8266 device. In this experiment we will use ESP-Table_X-Y (X = Table No, Y = Microcontroller No) Think of it a bit like a hostname (Or just a name, like Greg).
 unsigned long lastLoop1 = 0; //Needed for the millis() loop function
@@ -176,18 +177,20 @@ void send_data_MQTT(String value, const char *topic)
     }
   }
 }
-/*void measure_soil(){
+void measure_soil()
+{
   //# the approximate moisture levels for the sensor reading
-//# 0 to 300 dry soil
-//# 300 to 700 humid soil
-//# 700 to 950 in water
-//#define sensorPin A0
+  //# 0 to 300 dry soil
+  //# 300 to 700 humid soil
+  //# 700 to 950 in water
+
   double sensorValue = analogRead(sensorPin); // read the analog in value:
   sensorValue = map(sensorValue, 1024, 0, 0, 100);
   Serial.print("Moisture : ");
   Serial.println(sensorValue); //Prints out the value of the soil sensor to check if it is wired correctly
+  soil_moisture = String(sensorValue);
   Serial.println("%");
-}*/
+}
 /*void measure_distance_ultrasonic(){
 int trigger=D7;                        // Der Trigger Pin
 int echo=D8;                                  // Der Echo Pin
@@ -502,6 +505,7 @@ void loop()
   if ((now - lastLoop1) > 5000)
   {
     lastLoop1 = now;
+    //measure_soil();
     measure_temp();
     measure_humidity();
     measure_pressure();
@@ -511,20 +515,19 @@ void loop()
     //delay(1000);          //Short delay to finish up all calculations before going to DeepSleep
     //Serial.print("Disconnecting from WiFi");
     //WiFi.disconnect(); // Disconnects the wifi safely
-    if (!client.connected())
-    {
-      Serial.print("Connection to MQTT broker lost/broken! Retrying connection");
-      connect_MQTT(mqtt_server_2, 1883);
-    }
-    else
-    {
-      send_data_MQTT(bme280_pressure_string, pressure_bme280_topic_1);
-      send_data_MQTT(bme280_temp_string, temp_bme280_topic_1);
-      send_data_MQTT(bme280_humidity_string, humidity_bme280_topic_1);
-      send_data_MQTT(dallas_temp_0_string, temp_ds18b20_topic_1);
-      send_data_MQTT(dallas_temp_1_string, temp_ds18b20_topic_2);
-      send_data_MQTT(dallas_temp_2_string, temp_ds18b20_topic_3);
-    }
+    send_data_MQTT(bme280_temp_string, temp_bme280_topic_1);
+    send_data_MQTT(bme280_humidity_string, humidity_bme280_topic_1);
+    send_data_MQTT(bme280_pressure_string, pressure_bme280_topic_1);
+    send_data_MQTT(dallas_temp_0_string, temp_ds18b20_topic_1);
+    send_data_MQTT(dallas_temp_1_string, temp_ds18b20_topic_2);
+    send_data_MQTT(dallas_temp_2_string, temp_ds18b20_topic_3);
+    //send_data_MQTT(soil_moisture, soil_moisture_topic);
+  }
+  if ((now - lastLoop2) > 600000)
+  {
+    lastLoop2 = now;
+    //measure_soil();
+    //send_data_MQTT(soil_moisture, soil_moisture_topic);
   }
   /*if (now - pHLoop > 300000)
   {
