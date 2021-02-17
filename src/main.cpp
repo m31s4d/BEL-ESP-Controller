@@ -80,18 +80,18 @@ Adafruit_Sensor *bme_humidity = bme.getHumiditySensor(); //Gets humidity value f
 
 // MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
-const char *mqtt_server_1 = "192.168.0.30";                                          //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-const char *mqtt_server_2 = "192.168.178.30";                                        //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-const char *temp_bme280_topic_1 = "aeroponic/growtent2/temperatur/bme280/sensor1";   //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *humidity_bme280_topic_1 = "aeroponic/growtent2/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *pressure_bme280_topic_1 = "aeroponic/growtent2/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *temp_ds18b20_topic_1 = "aeroponic/growtent2/temperature/d18b20/sensor1"; //Adds MQTT topic for the dallas sensor 1 in the root zone
-const char *temp_ds18b20_topic_2 = "aeroponic/growtent2/temperature/d18b20/sensor2"; //Adds MQTT topic for the dallas senssor 2
-const char *temp_ds18b20_topic_3 = "aeroponic/growtent2/temperature/d18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
-const char *pH_ezo_topic_1 = "aeroponic/growtent2/ph/ezo_circuit/sensor1";           //Adds MQTT topic for the AtlasScientific pH probe
-const char *pH_command_topic = "aeroponic/growtent2/pH/AtlasScientific/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
-const char *mqtt_connection_topic = "aeroponic/growtent2/connection/sensor1";        //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
-const char *soil_moisture_topic = "aeroponic/growtent2/soil_moisture/sensor1";       //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
+const char *mqtt_server_1 = "192.168.0.29";                                          //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server_2 = "192.168.178.29";                                        //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *temp_bme280_topic_1 = "aeroponic/growtent3/temperatur/bme280/sensor1";   //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *humidity_bme280_topic_1 = "aeroponic/growtent3/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *pressure_bme280_topic_1 = "aeroponic/growtent3/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *temp_ds18b20_topic_1 = "aeroponic/growtent3/temperature/d18b20/sensor1"; //Adds MQTT topic for the dallas sensor 1 in the root zone
+const char *temp_ds18b20_topic_2 = "aeroponic/growtent3/temperature/d18b20/sensor2"; //Adds MQTT topic for the dallas senssor 2
+const char *temp_ds18b20_topic_3 = "aeroponic/growtent3/temperature/d18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
+const char *pH_ezo_topic_1 = "aeroponic/growtent3/ph/ezo_circuit/sensor1";           //Adds MQTT topic for the AtlasScientific pH probe
+const char *pH_command_topic = "aeroponic/growtent3/pH/AtlasScientific/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+const char *mqtt_connection_topic = "aeroponic/growtent3/connection/sensor1";        //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
+const char *soil_moisture_topic = "aeroponic/growtent3/soil_moisture/sensor1";       //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 
 String nameBuffer = "BEL-Ponic-" + String(random(0xffff), HEX); // Create a random client ID
 const char *clientID = nameBuffer.c_str();
@@ -101,7 +101,7 @@ unsigned long soilLoop = 0; //Needed for the millis() loop function
 unsigned long pHLoop = 0;    //Needed for the millis() of the pH Function to check if 5 minutes are over
 
 WiFiClient wifiClient;                                // Initialise the WiFi and MQTT Client objects
-PubSubClient client(mqtt_server_1, 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
+PubSubClient client(mqtt_server_2, 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
 
 void connect_wifi(const char *var_ssid, const char *var_wifi_password)
 {
@@ -135,7 +135,6 @@ void connect_wifi(const char *var_ssid, const char *var_wifi_password)
 }
 void connect_MQTT(const char *var_mqtt_client, int port_num)
 { //Defines a function "connect_MQTT" which includes all necessary steps to connect the ESP with the server
-
   client.setServer(var_mqtt_client, port_num);                //Important to set the MQTT Server in each connection call, otherwise a connection will not be successful
   PubSubClient client(var_mqtt_client, port_num, wifiClient); // 1883 is the listener port for the Broker
   // Connect to MQTT Broker
@@ -216,6 +215,7 @@ void measure_temp()
   //bme_pressure->getEvent(&pressure_event);
   //bme_humidity->getEvent(&humidity_event);
   bme280_temp = bme.readTemperature(); //Sets the variable temp to the temp measure of the BME280
+  Serial.print(bme280_temp);
   //bme280_humidity = humidity_event.relative_humidity; //Sets variable bme_humidity to humidity measure of BME280
   //bme280_pressure = pressure_event.pressure; //Sets variable bme_pressure to pressure measire of BME280
   //float bme280_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
@@ -505,16 +505,10 @@ void loop()
   if ((now - mainLoop) > 5000)
   {
     mainLoop = now;
-    //measure_soil();
     measure_temp();
     measure_humidity();
     measure_pressure();
     read_dallas();
-    //Serial.print("Disconnecting from MQTT Broker");
-    //client.disconnect(); // disconnect from the MQTT broker
-    //delay(1000);          //Short delay to finish up all calculations before going to DeepSleep
-    //Serial.print("Disconnecting from WiFi");
-    //WiFi.disconnect(); // Disconnects the wifi safely
     send_data_MQTT(bme280_temp_string, temp_bme280_topic_1);
     send_data_MQTT(bme280_humidity_string, humidity_bme280_topic_1);
     send_data_MQTT(bme280_pressure_string, pressure_bme280_topic_1);
@@ -526,8 +520,8 @@ void loop()
   if ((now - soilLoop) > 600000)
   {
     soilLoop = now;
-    //measure_soil();
-    //send_data_MQTT(soil_moisture, soil_moisture_topic);
+    measure_soil();
+    send_data_MQTT(soil_moisture, soil_moisture_topic);
   }
   /*if (now - pHLoop > 3000000)
   {
