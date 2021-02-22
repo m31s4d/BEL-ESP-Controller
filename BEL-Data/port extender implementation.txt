@@ -1,0 +1,15 @@
+sudo pip3 install adafruit-circuitpython-mcp230xx
+
+import board 
+import busio
+from digitalio
+import Directionfrom adafruit_mcp230xx.mcp23008
+import MCP23008;
+i2c = busio.I2C(board.SCL, board.SDA)
+
+mcp = MCP23008(i2c)
+
+pin0 = mcp.get_pin(0)
+pin0.direction = Direction.OUTPUT
+
+pin0.value = True  # GPIO0 / GPIOA0 to high logic level
