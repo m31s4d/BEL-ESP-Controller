@@ -15,7 +15,9 @@ Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Contro
 #include "ESP8266WiFi.h"       // Enables the ESP8266 to connect to the local network (via WiFi)
 #include "PubSubClient.h"      // Allows us to connect to, and publish to the MQTT broker
 
+#define TCAADDR 0x70
 #define sensorPin A0
+
 #define pH_address 99               //default I2C ID number for EZO pH Circuit.
 char ph_computerdata[20];           //we make a 20 byte character array to hold incoming data from a pc/mac/other.
 byte ph_received_from_computer = 0; //we need to know how many characters have been received.
@@ -94,6 +96,16 @@ unsigned long pHLoop = 0;    //Needed for the millis() of the pH Function to che
 
 WiFiClient wifiClient;                                // Initialise the WiFi and MQTT Client objects
 PubSubClient client(mqtt_server, 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
+
+
+void tca_bus_select(uint8_t i)
+{
+  if (i > 7)
+    return;
+  Wire.beginTransmission(0x70);
+  Wire.write(1 << i);
+  Wire.endTransmission();
+}
 
 void connect_wifi(const char *var_ssid, const char *var_wifi_password)
 {
@@ -202,6 +214,7 @@ delay(1000);
 }*/
 void measure_bme280()
 {
+  //tca_bus_select(tca_bus); 
   #define SEALEVELPRESSURE_HPA (1013.25)                        //Defines the pressure at sea level to calculate the approximate alltitude via the current pressure level
   bme280_temp = bme.readTemperature(); //Sets the variable temp to the temp measure of the BME280
   Serial.print(bme280_temp);
