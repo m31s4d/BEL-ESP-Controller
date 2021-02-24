@@ -74,18 +74,18 @@ Adafruit_BME280 bme;                                     // Create BME280 instan
 // MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
 const char *mqtt_server = "192.168.178.29";                                          //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-const char *temp_bme280_topic_1 = "aeroponic/growtent3/temperatur/bme280/sensor1";   //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *humidity_bme280_topic_1 = "aeroponic/growtent3/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *pressure_bme280_topic_1 = "aeroponic/growtent3/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *temp_ds18b20_topic_1 = "aeroponic/growtent3/temperature/d18b20/sensor1"; //Adds MQTT topic for the dallas sensor 1 in the root zone
-const char *temp_ds18b20_topic_2 = "aeroponic/growtent3/temperature/d18b20/sensor2"; //Adds MQTT topic for the dallas senssor 2
-const char *temp_ds18b20_topic_3 = "aeroponic/growtent3/temperature/d18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
-const char *pH_ezo_topic_1 = "aeroponic/growtent3/ph/ezo_circuit/sensor1";           //Adds MQTT topic for the AtlasScientific pH probe
-const char *pH_command_topic = "aeroponic/growtent3/pH/AtlasScientific/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
-const char *mqtt_connection_topic = "aeroponic/growtent3/connection/sensor1";        //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
-const char *soil_moisture_topic = "aeroponic/growtent3/soil_moisture/sensor1";       //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
+const char *temp_bme280_topic_1 = "aeroponic/growtent2/temperature/bme280/sensor1";   //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *humidity_bme280_topic_1 = "aeroponic/growtent2/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *pressure_bme280_topic_1 = "aeroponic/growtent2/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *temp_ds18b20_topic_1 = "aeroponic/growtent2/temperature/d18b20/sensor1"; //Adds MQTT topic for the dallas sensor 1 in the root zone
+const char *temp_ds18b20_topic_2 = "aeroponic/growtent2/temperature/d18b20/sensor2"; //Adds MQTT topic for the dallas senssor 2
+const char *temp_ds18b20_topic_3 = "aeroponic/growtent2/temperature/d18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
+const char *pH_ezo_topic_1 = "aeroponic/growtent2/ph/ezo_circuit/sensor1";           //Adds MQTT topic for the AtlasScientific pH probe
+const char *pH_command_topic = "aeroponic/growtent2/pH/AtlasScientific/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+const char *mqtt_connection_topic = "aeroponic/growtent2/connection/sensor1";        //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
+const char *soil_moisture_topic = "aeroponic/growtent2/soil_moisture/sensor1";       //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 
-String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId());//String(random(0xffff), HEX); // Create a random client ID
+String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId(),HEX);//String(random(0xffff), HEX); // Create a random client ID
 const char *clientID = nameBuffer.c_str();
 //const char *clientID = "ESP-Table1_Test_1"; // The client id identifies the ESP8266 device. In this experiment we will use ESP-Table_X-Y (X = Table No, Y = Microcontroller No) Think of it a bit like a hostname (Or just a name, like Greg).
 unsigned long mainLoop = 0; //Needed for the millis() loop function
@@ -464,12 +464,12 @@ void loop()
     send_data_MQTT(String(dallas_temp_2), temp_ds18b20_topic_3);
     //send_data_MQTT(soil_moisture, soil_moisture_topic);
   }
-  if ((now - soilLoop) > 600000)
+  /*if ((now - soilLoop) > 600000)
   {
     soilLoop = now;
     measure_soil();
     send_data_MQTT(soil_moisture, soil_moisture_topic);
-  }
+  }*/
   /*if (now - pHLoop > 3000000)
   {
     pHLoop = now;
