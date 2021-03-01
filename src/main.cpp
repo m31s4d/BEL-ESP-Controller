@@ -17,6 +17,7 @@ Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Contro
 
 #define TCAADDR 0x70
 #define sensorPin A0
+#define soilPin D5 //Defines D5 as output pin connected to VCC on moisture sensore. Reduces 
 
 #define pH_address 99               //default I2C ID number for EZO pH Circuit.
 char ph_computerdata[20];           //we make a 20 byte character array to hold incoming data from a pc/mac/other.
@@ -64,19 +65,19 @@ float bme280_altitude; //Sets the altitutde variable bme_altitutde to zero
 float dallas_temp_0;   //Sets variable for the first DS18B20 found on the bus
 float dallas_temp_1;   //Sets variable for the first DS18B20 found on the bus
 float dallas_temp_2;   //Sets variable for the first DS18B20 found on the bus
+int soil_moisture;
 //Initialization of all environmental variables as global to share them between functions
 String dallas_temp_0_string;       //Variable needed for MQTT transmission of DS18B20 measurements
 String dallas_temp_1_string;       //Variable needed for MQTT transmission of DS18B20 measurements
 String dallas_temp_2_string;       //Variable needed for MQTT transmission of DS18B20 measurements
 String atlas_scientific_ph_string; //Variable to store pH value for MQTT transmission
-String soil_moisture;
 
-Adafruit_BME280 bme;                                     // Create BME280 instance for the first sensor
+Adafruit_BME280 bme; // Create BME280 instance for the first sensor
 
 // MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
 const char *mqtt_server = "192.168.178.29";                                          //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-const char *temp_bme280_topic_1 = "aeroponic/growtent2/temperature/bme280/sensor1";   //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *temp_bme280_topic_1 = "aeroponic/growtent2/temperature/bme280/sensor1";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *humidity_bme280_topic_1 = "aeroponic/growtent2/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *pressure_bme280_topic_1 = "aeroponic/growtent2/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *temp_ds18b20_topic_1 = "aeroponic/growtent2/temperature/d18b20/sensor1"; //Adds MQTT topic for the dallas sensor 1 in the root zone
@@ -87,16 +88,15 @@ const char *pH_command_topic = "aeroponic/growtent2/pH/AtlasScientific/command";
 const char *mqtt_connection_topic = "aeroponic/growtent2/connection/sensor1";        //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 const char *soil_moisture_topic = "aeroponic/growtent2/soil_moisture/sensor1";       //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 
-String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId(),HEX);//String(random(0xffff), HEX); // Create a random client ID
+String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId(), HEX); //String(random(0xffff), HEX); // Create a random client ID
 const char *clientID = nameBuffer.c_str();
 //const char *clientID = "ESP-Table1_Test_1"; // The client id identifies the ESP8266 device. In this experiment we will use ESP-Table_X-Y (X = Table No, Y = Microcontroller No) Think of it a bit like a hostname (Or just a name, like Greg).
 unsigned long mainLoop = 0; //Needed for the millis() loop function
 unsigned long soilLoop = 0; //Needed for the millis() loop function
-unsigned long pHLoop = 0;    //Needed for the millis() of the pH Function to check if 5 minutes are over
+unsigned long pHLoop = 0;   //Needed for the millis() of the pH Function to check if 5 minutes are over
 
-WiFiClient wifiClient;                                // Initialise the WiFi and MQTT Client objects
+WiFiClient wifiClient;                              // Initialise the WiFi and MQTT Client objects
 PubSubClient client(mqtt_server, 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
-
 
 void tca_bus_select(uint8_t i)
 {
@@ -138,7 +138,7 @@ void connect_wifi(const char *var_ssid, const char *var_wifi_password)
   Serial.println(clientID);
 }
 void connect_MQTT(const char *var_mqtt_client, int port_num)
-{ //Defines a function "connect_MQTT" which includes all necessary steps to connect the ESP with the server
+{                                                             //Defines a function "connect_MQTT" which includes all necessary steps to connect the ESP with the server
   client.setServer(var_mqtt_client, port_num);                //Important to set the MQTT Server in each connection call, otherwise a connection will not be successful
   PubSubClient client(var_mqtt_client, port_num, wifiClient); // 1883 is the listener port for the Broker
   // Connect to MQTT Broker
@@ -186,12 +186,13 @@ void measure_soil()
   //# 0 to 300 dry soil
   //# 300 to 700 humid soil
   //# 700 to 950 in water
-
+  pinMode(soilPin, OUTPUT);
+  digitalWrite(soilPin, HIGH);
   double sensorValue = analogRead(sensorPin); // read the analog in value:
   sensorValue = map(sensorValue, 1024, 0, 0, 100);
   Serial.print("Moisture : ");
   Serial.println(sensorValue); //Prints out the value of the soil sensor to check if it is wired correctly
-  soil_moisture = String(sensorValue);
+  soil_moisture = sensorValue;
   Serial.println("%");
 }
 /*void measure_distance_ultrasonic(){
@@ -214,8 +215,8 @@ delay(1000);
 }*/
 void measure_bme280()
 {
-  //tca_bus_select(tca_bus); 
-  #define SEALEVELPRESSURE_HPA (1013.25)                        //Defines the pressure at sea level to calculate the approximate alltitude via the current pressure level
+//tca_bus_select(tca_bus);
+#define SEALEVELPRESSURE_HPA (1013.25) //Defines the pressure at sea level to calculate the approximate alltitude via the current pressure level
   bme280_temp = bme.readTemperature(); //Sets the variable temp to the temp measure of the BME280
   Serial.print(bme280_temp);
   bme280_humidity = bme.readHumidity(); //Sets variable bme_humidity to humidity measure of BME280
@@ -405,7 +406,7 @@ void measure_ds18b20()
 
         // Print the data
         dallas_temp_0 = dallassensors.getTempC(tempDeviceAddress);
-          Serial.print("Temp C: ");
+        Serial.print("Temp C: ");
         Serial.print(dallas_temp_0);
         Serial.println(String(dallas_temp_0) + " of sensor " + i); //To allow debugging a serial output is written if the measurment was published succesfully.
       }
@@ -475,13 +476,12 @@ void loop()
     send_data_MQTT(String(dallas_temp_0), temp_ds18b20_topic_1);
     send_data_MQTT(String(dallas_temp_1), temp_ds18b20_topic_2);
     send_data_MQTT(String(dallas_temp_2), temp_ds18b20_topic_3);
-    //send_data_MQTT(soil_moisture, soil_moisture_topic);
   }
   /*if ((now - soilLoop) > 600000)
   {
     soilLoop = now;
     measure_soil();
-    send_data_MQTT(soil_moisture, soil_moisture_topic);
+//send_data_MQTT(String(soil_moisture), soil_moisture_topic);
   }*/
   /*if (now - pHLoop > 3000000)
   {
