@@ -109,7 +109,6 @@ void tca_bus_select(uint8_t i)
   Wire.write(1 << i);
   Wire.endTransmission();
 }
-
 void connect_wifi(const char *var_ssid, const char *var_wifi_password)
 {
   //Defines the wifi connection settings of the second broker
@@ -228,12 +227,14 @@ void measure_bme280(int tca_bus)
   Serial.print(bme280_pressure);
   //float bme280_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
 }
-/*void measure_pH(String cmd_code)
+void measure_pH(String cmd_code)
 {
+  //calibration commands for EZO pH Circuit: cal, mid, 7 --> cal, low, "number of calibration solution", cal, high, 7 "number of calibration solution"
+  int i;
   int code_length = cmd_code.length();    //Gets the length of the string to be used in the for loop later
   strcpy(ph_computerdata, cmd_code.c_str()); // copying the contents of the string to char array
                                           //if a command was sent to the EZO device.
-  for (i = 0; i <= code_length; i++)
+  for ( i = 0; i <= code_length; i++)
   {
     ph_computerdata[i] = tolower(ph_computerdata[i]); //"Sleep" ≠ "sleep" //set all char to lower case, this is just so this exact sample code can recognize the "sleep" command.
   }
@@ -292,7 +293,7 @@ void measure_bme280(int tca_bus)
   //Uncomment this section if you want to take the pH value and convert it into floating point number.
   atlas_scientific_ph = atof(ph_data);                           //Converts the array to a float value which we will send via MQTT
   String pH_string = String((float)atlas_scientific_ph);         //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
-}*/
+}
 /*void measure_EC(String cmd_code)
 {
    int ec_code_length = cmd_code.length();    //Gets the length of the string to be used in the for loop later
@@ -439,13 +440,29 @@ void measure_ds18b20()
     //float temperatureC = dallassensors.getTempCByIndex(0); //Adds the value of the 0 device of temperature to the variable tempc
   }
 }
+void mqtt_callback(char *topic, byte *payload, unsigned int length)
+{
+  Serial.print("Message arrived in topic: ");
+  Serial.println(topic);
+  Serial.print("Message:");
+  String msg;
+  if (topic == "aeroponic/B1/pH/command")
+  {
+    for (int i = 0; i < length; i++)
+    {
+      Serial.print((char)payload[i]);
+      msg = msg + (char)payload[i];
+    }
+    measure_pH(msg);
+  }
+}
 void setup()
 {
   Serial.begin(9600);                          // Initialize the I2C bus (BH1750 library doesn't do this automatically)
   Wire.begin();                                // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
   dallassensors.begin();                       //Activates the DS18b20 sensors on the one wire
   numDevices = dallassensors.getDeviceCount(); //Stores the DS18BB20 addresses on the ONEWIRE
-  //client.setCallback(callback);                     //Tells the pubsubclient which function to use in case of a callback
+  client.setCallback(mqtt_callback);           //Tells the pubsubclient which function to use in case of a callback
   if (!bme.begin(0x76))
   { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
     Serial.println(F("Could not find first BME280 sensor, check wiring!"));
@@ -484,39 +501,15 @@ void loop()
   {
     soilLoop = now;
     measure_soil();
-//send_data_MQTT(String(soil_moisture), soil_moisture_topic);
+  //send_data_MQTT(String(soil_moisture), soil_moisture_topic);
   }*/
   /*if (now - pHLoop > 3000000)
   {
     pHLoop = now;
     measure_pH("reading");
-    send_data_MQTT(atlas_scientific_ph_string, pH_ezo_topic_1);
+    send_data_MQTT(String(atlas_scientific_ph), pH_ezo_topic_1);
     delay(50);
     measure_pH("sleep");
   }*/
   // client.loop();
 }
-
-/*void callback(char *topic, byte *payload, unsigned int length)
-{
-  Serial.print("Message arrived in topic: ");
-  Serial.println(topic);
-  Serial.print("Message:");
-  String msg;
-  if(topic == "aeroponic/growtent1/pH/AtlasScientific/command"){
-   
-  for (int i = 0; i < length; i++)
-  {
-    Serial.print((char)payload[i]);
-    msg = msg + (char)payload[i];
-  }
-  if (msg == "on")
-  {
-    Serial.println("I received an ON");
-  }
-  else if (msg == "off")
-  {
-    Serial.println("I received an OFF");
-  }
-  }
-}*/
