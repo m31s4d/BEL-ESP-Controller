@@ -17,7 +17,7 @@ Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Contro
 
 #define TCAADDR 0x70
 #define sensorPin A0
-#define soilPin D5 //Defines D5 as output pin connected to VCC on moisture sensore. Reduces 
+#define soilPin D5 //Defines D5 as output pin connected to VCC on moisture sensore. Reduces
 
 #define pH_address 99               //default I2C ID number for EZO pH Circuit.
 char ph_computerdata[20];           //we make a 20 byte character array to hold incoming data from a pc/mac/other.
@@ -80,6 +80,9 @@ const char *mqtt_server = "192.168.178.29";                                     
 const char *temp_bme280_topic_1 = "aeroponic/growtent2/temperature/bme280/sensor1";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *humidity_bme280_topic_1 = "aeroponic/growtent2/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *pressure_bme280_topic_1 = "aeroponic/growtent2/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *temp_bme280_topic_2 = "aeroponic/growtent2/temperature/bme280/sensor2";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *humidity_bme280_topic_2 = "aeroponic/growtent2/humidity/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *pressure_bme280_topic_2 = "aeroponic/growtent2/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 const char *temp_ds18b20_topic_1 = "aeroponic/growtent2/temperature/d18b20/sensor1"; //Adds MQTT topic for the dallas sensor 1 in the root zone
 const char *temp_ds18b20_topic_2 = "aeroponic/growtent2/temperature/d18b20/sensor2"; //Adds MQTT topic for the dallas senssor 2
 const char *temp_ds18b20_topic_3 = "aeroponic/growtent2/temperature/d18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
@@ -213,9 +216,9 @@ Serial.print(distance_measured);            // Den Weg in Zentimeter ausgeben
 Serial.println(" cm");               //
 delay(1000);      
 }*/
-void measure_bme280()
+void measure_bme280(int tca_bus)
 {
-//tca_bus_select(tca_bus);
+  tca_bus_select(tca_bus);
 #define SEALEVELPRESSURE_HPA (1013.25) //Defines the pressure at sea level to calculate the approximate alltitude via the current pressure level
   bme280_temp = bme.readTemperature(); //Sets the variable temp to the temp measure of the BME280
   Serial.print(bme280_temp);
@@ -449,12 +452,6 @@ void setup()
     //while (1)
     //delay(10);
   }
-  //if (!bme2.begin(0x77))
-  //{ //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
-  // Serial.println(F("Could not find second BME280 sensor, check wiring!"));
-  //while (1)
-  //delay(10);
-  // }
 }
 void loop()
 { //This function will continously be executed; everything which needs to be done recurringly is set here.
@@ -462,20 +459,26 @@ void loop()
   if (WiFi.status() != WL_CONNECTED)
   {
     connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
-    delay(500);
+  }
+  if (!client.connected())
+  {
     connect_MQTT(mqtt_server, 1883);
   }
   if ((now - mainLoop) > 5000)
   {
     mainLoop = now;
-    measure_bme280();
-    measure_ds18b20();
+    measure_bme280(0);
     send_data_MQTT(String(bme280_temp), temp_bme280_topic_1);
     send_data_MQTT(String(bme280_humidity), humidity_bme280_topic_1);
     send_data_MQTT(String(bme280_pressure), pressure_bme280_topic_1);
+    measure_bme280(7);
+    send_data_MQTT(String(bme280_temp), temp_bme280_topic_2);
+    send_data_MQTT(String(bme280_humidity), humidity_bme280_topic_2);
+    send_data_MQTT(String(bme280_pressure), pressure_bme280_topic_2);
+    measure_ds18b20();
     send_data_MQTT(String(dallas_temp_0), temp_ds18b20_topic_1);
     send_data_MQTT(String(dallas_temp_1), temp_ds18b20_topic_2);
-    send_data_MQTT(String(dallas_temp_2), temp_ds18b20_topic_3);
+    //send_data_MQTT(String(dallas_temp_2), temp_ds18b20_topic_3);
   }
   /*if ((now - soilLoop) > 600000)
   {
