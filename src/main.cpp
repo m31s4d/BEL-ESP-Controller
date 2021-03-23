@@ -5,13 +5,13 @@ Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Contro
  **/
 
 // Include the libraries we need
-#include <Arduino.h>
-#include <Wire.h> //Adds library for the I2C bus on D1 (SCL) and D2(SCD) (both can be changed on the ESP8266 to the deisred GPIO pins)
+#include "Arduino.h"
+#include "Wire.h" //Adds library for the I2C bus on D1 (SCL) and D2(SCD) (both can be changed on the ESP8266 to the deisred GPIO pins)
 //#include <SPI.h>
-#include <OneWire.h>           //Adds library needed to initialize and use the 1-Wire protocoll for DS18B20 sensors
-#include <DallasTemperature.h> //Adds the Dallas Temp library to use DS18B20 with the Wemos
-#include <Adafruit_BME280.h>   //Adds library for the BME280 (Bosch) environmental sensor
-#include <Adafruit_Sensor.h>   //Adds library for all Adafruit sensors to make them usable
+#include "OneWire.h"           //Adds library needed to initialize and use the 1-Wire protocoll for DS18B20 sensors
+#include "DallasTemperature.h" //Adds the Dallas Temp library to use DS18B20 with the Wemos
+#include "Adafruit_BME280.h"   //Adds library for the BME280 (Bosch) environmental sensor
+#include "Adafruit_Sensor.h"   //Adds library for all Adafruit sensors to make them usable
 #include "ESP8266WiFi.h"       // Enables the ESP8266 to connect to the local network (via WiFi)
 #include "PubSubClient.h"      // Allows us to connect to, and publish to the MQTT broker
 
