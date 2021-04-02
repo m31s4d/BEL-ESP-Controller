@@ -55,32 +55,6 @@ String atlas_scientific_ph_string; //Variable to store pH value for MQTT transmi
 #define sensorPin A0
 #define soilPin D5 //Defines D5 as output pin connected to VCC on moisture sensore. Reduces
 
-#define pH_address 99               //default I2C ID number for EZO pH Circuit.
-char ph_computerdata[20];           //we make a 20 byte character array to hold incoming data from a pc/mac/other.
-byte ph_received_from_computer = 0; //we need to know how many characters have been received.
-byte ph_serial_event = 0;           //a flag to signal when data has been received from the pc/mac/other.
-byte ph_response_code = 0;          //used to hold the I2C response code.
-char ph_data[20];                   //we make a 20 byte character array to hold incoming data from the pH circuit.
-byte ph_in_char = 0;                //used as a 1 byte buffer to store inbound bytes from the pH Circuit.
-byte ph_counter = 0;                //counter used for ph_data array.
-int time_ph = 815;                  //used to change the delay needed depending on the command sent to the EZO Class pH Circuit.
-float atlas_scientific_ph;          //float var used to hold the float value of the pH.
-
-#define ec_address 0x64             //default I2C ID number for EZO EC Circuit.
-char ec_computerdata[20];           //we make a 20 byte character array to hold incoming data from a pc/mac/other.
-byte ec_received_from_computer = 0; //we need to know how many characters have been received.
-byte serial_event = 0;              //a flag to signal when data has been received from the pc/mac/other.
-byte ec_response_code = 0;          //used to hold the I2C response code.
-char ec_data[32];                   //we make a 32 byte character array to hold incoming data from the EC circuit.
-byte ec_in_char;                    //used as a 1 byte buffer to store inbound bytes from the EC Circuit.
-byte ec_counter = 0;                //counter used for ec_data array.
-int time_ec = 570;                  //used to change the delay needed depending on the command sent to the EZO Class EC Circuit.
-
-char *ec;  //char pointer used in string parsing.
-char *tds; //char pointer used in string parsing.
-char *sal; //char pointer used in string parsing.
-char *sg;  //char pointer used in string parsing.
-
 float ph_float;  //float var used to hold float of pH value
 float ec_float;  //float var used to hold the float value of the conductivity.
 float tds_float; //float var used to hold the float value of the TDS.
@@ -423,6 +397,33 @@ void loop()
   }*/
 }
 ///////////////////////////////////////////////////////////////////////////////////////////
+/*
+#define pH_address 99               //default I2C ID number for EZO pH Circuit.
+char ph_computerdata[20];           //we make a 20 byte character array to hold incoming data from a pc/mac/other.
+byte ph_received_from_computer = 0; //we need to know how many characters have been received.
+byte ph_serial_event = 0;           //a flag to signal when data has been received from the pc/mac/other.
+byte ph_response_code = 0;          //used to hold the I2C response code.
+char ph_data[20];                   //we make a 20 byte character array to hold incoming data from the pH circuit.
+byte ph_in_char = 0;                //used as a 1 byte buffer to store inbound bytes from the pH Circuit.
+byte ph_counter = 0;                //counter used for ph_data array.
+int time_ph = 815;                  //used to change the delay needed depending on the command sent to the EZO Class pH Circuit.
+float atlas_scientific_ph;          //float var used to hold the float value of the pH.
+
+#define ec_address 0x64             //default I2C ID number for EZO EC Circuit.
+char ec_computerdata[20];           //we make a 20 byte character array to hold incoming data from a pc/mac/other.
+byte ec_received_from_computer = 0; //we need to know how many characters have been received.
+byte serial_event = 0;              //a flag to signal when data has been received from the pc/mac/other.
+byte ec_response_code = 0;          //used to hold the I2C response code.
+char ec_data[32];                   //we make a 32 byte character array to hold incoming data from the EC circuit.
+byte ec_in_char;                    //used as a 1 byte buffer to store inbound bytes from the EC Circuit.
+byte ec_counter = 0;                //counter used for ec_data array.
+int time_ec = 570;                  //used to change the delay needed depending on the command sent to the EZO Class EC Circuit.
+
+char *ec;  //char pointer used in string parsing.
+char *tds; //char pointer used in string parsing.
+char *sal; //char pointer used in string parsing.
+char *sg;  //char pointer used in string parsing.
+*/
 /*void measure_pH(String cmd_code)
 {
   //calibration commands for EZO pH Circuit: cal, mid, 7 --> cal, low, "number of calibration solution", cal, high, 7 "number of calibration solution"
