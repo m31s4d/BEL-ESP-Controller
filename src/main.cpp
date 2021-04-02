@@ -1,19 +1,18 @@
 /**
  This code was written/hacked together by Swen Schreiter and is the basis for the multifunctional environmental sensing device called S.E.E.D (Small Electronic Environmental Device).
 Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in a research environment.
-
  **/
-#define HWTYPE 0; // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC 
+#define HWTYPE 1 // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
 // Include the libraries we need
 #include "Arduino.h"
-#include "Wire.h" //Adds library for the I2C bus on D1 (SCL) and D2(SCD) (both can be changed on the ESP8266 to the deisred GPIO pins)
-#include "ESP8266WiFi.h"       // Enables the ESP8266 to connect to the local network (via WiFi)
-#include "PubSubClient.h"      // Allows us to connect to, and publish to the MQTT broker
+#include "Wire.h"         //Adds library for the I2C bus on D1 (SCL) and D2(SCD) (both can be changed on the ESP8266 to the deisred GPIO pins)
+#include "ESP8266WiFi.h"  // Enables the ESP8266 to connect to the local network (via WiFi)
+#include "PubSubClient.h" // Allows us to connect to, and publish to the MQTT broker
 
-WiFiClient wifiClient;                              // Initialise the WiFi and MQTT Client objects
-PubSubClient client(mqtt_server, 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
+WiFiClient wifiClient;                                   // Initialise the WiFi and MQTT Client objects
+PubSubClient client("192.168.178.29", 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
 
-#if HWTYPE == 1
+#if HWTYPE == 0
 //#include <SPI.h>
 #include "OneWire.h"           //Adds library needed to initialize and use the 1-Wire protocoll for DS18B20 sensors
 #include "DallasTemperature.h" //Adds the Dallas Temp library to use DS18B20 with the Wemos
@@ -21,9 +20,7 @@ PubSubClient client(mqtt_server, 1883, wifiClient); // 1883 is the listener port
 #include "Adafruit_Sensor.h"   //Adds library for all Adafruit sensors to make them usable
 #define TCAADDR 0x70
 
-
 Adafruit_BME280 bme; // Create BME280 instance for the first sensor
-
 
 //Initialization of the OneWire Bus und the temp sensor
 const int oneWireBus = D3;                 // GPIO where the DS18B20 is connected to D3
@@ -42,22 +39,21 @@ float dallas_temp_1;   //Sets variable for the first DS18B20 found on the bus
 float dallas_temp_2;   //Sets variable for the first DS18B20 found on the bus
 
 //Initialization of all environmental variables as global to share them between functions
-String dallas_temp_0_string;       //Variable needed for MQTT transmission of DS18B20 measurements
-String dallas_temp_1_string;       //Variable needed for MQTT transmission of DS18B20 measurements
-String dallas_temp_2_string;       //Variable needed for MQTT transmission of DS18B20 measurements
+String dallas_temp_0_string; //Variable needed for MQTT transmission of DS18B20 measurements
+String dallas_temp_1_string; //Variable needed for MQTT transmission of DS18B20 measurements
+String dallas_temp_2_string; //Variable needed for MQTT transmission of DS18B20 measurements
 #else
 
 #include <Ezo_i2c.h> //include the EZO I2C library from https://github.com/Atlas-Scientific/Ezo_I2c_lib
-Ezo_board PH = Ezo_board(99, "PH");       //create a PH circuit object, who's address is 99 and name is "PH"
-Ezo_board EC = Ezo_board(100, "EC");      //create an EC circuit object who's address is 100 and name is "EC"
+//#include <Ezo_i2c_util.h> //brings in common print statements
+Ezo_board PH = Ezo_board(99, "PH");  //create a PH circuit object, who's address is 99 and name is "PH"
+Ezo_board EC = Ezo_board(100, "EC"); //create an EC circuit object who's address is 100 and name is "EC"
 
 String atlas_scientific_ph_string; //Variable to store pH value for MQTT transmission
 #endif
 
-
 #define sensorPin A0
 #define soilPin D5 //Defines D5 as output pin connected to VCC on moisture sensore. Reduces
-
 
 #define pH_address 99               //default I2C ID number for EZO pH Circuit.
 char ph_computerdata[20];           //we make a 20 byte character array to hold incoming data from a pc/mac/other.
@@ -70,13 +66,13 @@ byte ph_counter = 0;                //counter used for ph_data array.
 int time_ph = 815;                  //used to change the delay needed depending on the command sent to the EZO Class pH Circuit.
 float atlas_scientific_ph;          //float var used to hold the float value of the pH.
 
-#define ec_address 0x64              //default I2C ID number for EZO EC Circuit.
+#define ec_address 0x64             //default I2C ID number for EZO EC Circuit.
 char ec_computerdata[20];           //we make a 20 byte character array to hold incoming data from a pc/mac/other.
 byte ec_received_from_computer = 0; //we need to know how many characters have been received.
 byte serial_event = 0;              //a flag to signal when data has been received from the pc/mac/other.
 byte ec_response_code = 0;          //used to hold the I2C response code.
 char ec_data[32];                   //we make a 32 byte character array to hold incoming data from the EC circuit.
-byte ec_in_char;                //used as a 1 byte buffer to store inbound bytes from the EC Circuit.
+byte ec_in_char;                    //used as a 1 byte buffer to store inbound bytes from the EC Circuit.
 byte ec_counter = 0;                //counter used for ec_data array.
 int time_ec = 570;                  //used to change the delay needed depending on the command sent to the EZO Class EC Circuit.
 
@@ -85,16 +81,13 @@ char *tds; //char pointer used in string parsing.
 char *sal; //char pointer used in string parsing.
 char *sg;  //char pointer used in string parsing.
 
+float ph_float;  //float var used to hold float of pH value
 float ec_float;  //float var used to hold the float value of the conductivity.
 float tds_float; //float var used to hold the float value of the TDS.
 float sal_float; //float var used to hold the float value of the salinity.
 float sg_float;  //float var used to hold the float value of the specific gravity.
 
-
-
 int soil_moisture;
-
-
 
 // MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
@@ -110,6 +103,8 @@ const char *temp_ds18b20_topic_2 = "aeroponic/growtent2/temperature/d18b20/senso
 const char *temp_ds18b20_topic_3 = "aeroponic/growtent2/temperature/d18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
 const char *pH_ezo_topic_1 = "aeroponic/growtent2/ph/ezo_circuit/sensor1";           //Adds MQTT topic for the AtlasScientific pH probe
 const char *pH_command_topic = "aeroponic/growtent2/pH/AtlasScientific/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+const char *ec_ezo_topic_1 = "aeroponic/growtent2/ec/ezo_circuit/sensor1";           //Adds MQTT topic for the AtlasScientific pH probe
+const char *ec_command_topic = "aeroponic/growtent2/ec/AtlasScientific/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 const char *mqtt_connection_topic = "aeroponic/growtent2/connection/sensor1";        //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 const char *soil_moisture_topic = "aeroponic/growtent2/soil_moisture/sensor1";       //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 
@@ -119,8 +114,6 @@ const char *clientID = nameBuffer.c_str();
 unsigned long mainLoop = 0; //Needed for the millis() loop function
 unsigned long soilLoop = 0; //Needed for the millis() loop function
 unsigned long pHLoop = 0;   //Needed for the millis() of the pH Function to check if 5 minutes are over
-
-
 
 void connect_wifi(const char *var_ssid, const char *var_wifi_password)
 {
@@ -153,9 +146,9 @@ void connect_wifi(const char *var_ssid, const char *var_wifi_password)
   Serial.println(clientID);
 }
 void connect_MQTT(const char *var_mqtt_client, int port_num)
-{                                                             //Defines a function "connect_MQTT" which includes all necessary steps to connect the ESP with the server
+{ //Defines a function "connect_MQTT" which includes all necessary steps to connect the ESP with the server
   //PubSubClient client(var_mqtt_client, port_num, wifiClient); // 1883 is the listener port for the Broker
-  client.setServer(var_mqtt_client, port_num);                //Important to set the MQTT Server in each connection call, otherwise a connection will not be successful
+  client.setServer(var_mqtt_client, port_num); //Important to set the MQTT Server in each connection call, otherwise a connection will not be successful
   // Connect to MQTT Broker
   // client.connect returns a boolean value to let us know if the connection was successful.
   // If the connection is failing, make sure you are using the correct MQTT Username and Password (Setup Earlier in the Instructable)
@@ -229,7 +222,7 @@ Serial.print(distance_measured);            // Den Weg in Zentimeter ausgeben
 Serial.println(" cm");               //
 delay(1000);      
 }*/
-#if HWTYPE == 1
+#if HWTYPE == 0
 void tca_bus_select(uint8_t i)
 {
   if (i > 7)
@@ -298,14 +291,146 @@ void measure_ds18b20()
   }
 }
 #endif
-void measure_pH(String cmd_code)
+void receive_reading(Ezo_board &Sensor)
+{ // function to decode the reading after the read command was issued
+
+  Serial.print(Sensor.get_name());
+  Serial.print(": "); // print the name of the circuit getting the reading
+
+  Sensor.receive_read_cmd(); //get the response data and put it into the [Sensor].reading variable if successful
+
+  switch (Sensor.get_error())
+  { //switch case based on what the response code is.
+  case Ezo_board::SUCCESS:
+    Serial.print(Sensor.get_last_received_reading()); //the command was successful, print the reading
+    break;
+
+  case Ezo_board::FAIL:
+    Serial.print("Failed "); //means the command has failed.
+    break;
+
+  case Ezo_board::NOT_READY:
+    Serial.print("Pending "); //the command has not yet been finished calculating.
+    break;
+
+  case Ezo_board::NO_DATA:
+    Serial.print("No Data "); //the sensor has no data to send.
+    break;
+  }
+}
+void mqtt_callback(char *topic, byte *payload, unsigned int length)
+{
+  Serial.print("Message arrived in topic: ");
+  Serial.println(topic);
+  String tmp_topic = topic;
+  char msg[length];
+  if (tmp_topic == pH_command_topic)
+  {
+    Serial.print("Message:");
+    for (int i = 0; i < length; i++)
+    {
+      Serial.print((char)payload[i]);
+      msg[i] = (char)payload[i];
+    }
+    PH.send_cmd(msg);
+  }
+  if (tmp_topic == ec_command_topic)
+  {
+    Serial.print("Message:");
+    for (int i = 0; i < length; i++)
+    {
+      //Serial.print((char)payload[i]);
+      msg[i] = (char)payload[i];
+    }
+    Serial.print(msg);
+    EC.send_cmd(msg);
+  }
+}
+void setup()
+{
+  Serial.begin(9600);                // Initialize the I2C bus (BH1750 library doesn't do this automatically)
+  Wire.begin(D2, D1);                // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
+  client.setCallback(mqtt_callback); //Tells the pubsubclient which function to use in case of a callback
+#if HWTYPE == 0
+  dallassensors.begin();                       //Activates the DS18b20 sensors on the one wire
+  numDevices = dallassensors.getDeviceCount(); //Stores the DS18BB20 addresses on the ONEWIRE
+
+  if (!bme.begin(0x76))
+  { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
+    Serial.println(F("Could not find first BME280 sensor, check wiring!"));
+    //while (1)
+    //delay(10);
+  }
+#endif
+}
+void loop()
+{ //This function will continously be executed; everything which needs to be done recurringly is set here.
+  unsigned long now = millis();
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
+  }
+  if (!client.connected())
+  {
+    connect_MQTT(mqtt_server, 1883);
+  }
+  client.loop();
+#if HWTYPE == 0
+  if ((now - mainLoop) > 5000)
+  {
+    mainLoop = now;
+    /*
+    measure_bme280(0);
+    send_data_MQTT(String(bme280_temp), temp_bme280_topic_1);
+    send_data_MQTT(String(bme280_humidity), humidity_bme280_topic_1);
+    send_data_MQTT(String(bme280_pressure), pressure_bme280_topic_1);
+    measure_bme280(7);
+    send_data_MQTT(String(bme280_temp), temp_bme280_topic_2);
+    send_data_MQTT(String(bme280_humidity), humidity_bme280_topic_2);
+    send_data_MQTT(String(bme280_pressure), pressure_bme280_topic_2);
+    measure_ds18b20();
+    send_data_MQTT(String(dallas_temp_0), temp_ds18b20_topic_1);
+    send_data_MQTT(String(dallas_temp_1), temp_ds18b20_topic_2);
+    //send_data_MQTT(String(dallas_temp_2), temp_ds18b20_topic_3);
+    */
+  }
+
+#else
+  if (now - pHLoop > 30000)
+  {
+    pHLoop = now;
+    //measure_pH("reading");
+    EC.send_read_cmd();
+    if (EC.is_read_poll())
+    {
+      ec_float = EC.get_last_received_reading();
+      send_data_MQTT(String(ec_float), ec_ezo_topic_1);
+    }
+    PH.send_read_cmd();
+    if (PH.is_read_poll())
+    {
+      ph_float = PH.get_last_received_reading();
+      send_data_MQTT(String(ph_float), pH_ezo_topic_1);
+    }
+    Serial.println();
+  }
+#endif
+  /*if ((now - soilLoop) > 600000)
+  {
+    soilLoop = now;
+    measure_soil();
+  //send_data_MQTT(String(soil_moisture), soil_moisture_topic);
+  }*/
+}
+///////////////////////////////////////////////////////////////////////////////////////////
+/*void measure_pH(String cmd_code)
 {
   //calibration commands for EZO pH Circuit: cal, mid, 7 --> cal, low, "number of calibration solution", cal, high, 7 "number of calibration solution"
   int i;
-  int code_length = cmd_code.length();    //Gets the length of the string to be used in the for loop later
+  int code_length = cmd_code.length();       //Gets the length of the string to be used in the for loop later
   strcpy(ph_computerdata, cmd_code.c_str()); // copying the contents of the string to char array
-                                          //if a command was sent to the EZO device.
-  for ( i = 0; i <= code_length; i++)
+                                             //if a command was sent to the EZO device.
+  for (i = 0; i <= code_length; i++)
   {
     ph_computerdata[i] = tolower(ph_computerdata[i]); //"Sleep" ≠ "sleep" //set all char to lower case, this is just so this exact sample code can recognize the "sleep" command.
   }
@@ -316,7 +441,7 @@ void measure_pH(String cmd_code)
     time_ph = 250; //if any other command has been sent we wait only 250ms.
 
   Wire.beginTransmission(pH_address); //call the circuit by its ID number.
-  Wire.write(ph_computerdata);           //transmit the command that was sent through the serial port.
+  Wire.write(ph_computerdata);        //transmit the command that was sent through the serial port.
   Wire.endTransmission();             //end the I2C data transmission.
 
   if (strcmp(ph_computerdata, "sleep") != 0)
@@ -325,7 +450,7 @@ void measure_pH(String cmd_code)
     delay(time_ph); //wait the correct amount of time for the circuit to complete its instruction.
 
     Wire.requestFrom(pH_address, 20, 1); //call the circuit and request 20 bytes (this may be more than we need)
-    ph_response_code = Wire.read();         //the first byte is the response code, we read this separately.
+    ph_response_code = Wire.read();      //the first byte is the response code, we read this separately.
 
     switch (ph_response_code)
     {                            //switch case based on what the response code is.
@@ -347,10 +472,10 @@ void measure_pH(String cmd_code)
     }
 
     while (Wire.available())
-    {                        //are there bytes to receive.
+    {                           //are there bytes to receive.
       ph_in_char = Wire.read(); //receive a byte.
       ph_data[i] = ph_in_char;  //load this byte into our array.
-      i += 1;                //incur the counter for the array element.
+      i += 1;                   //incur the counter for the array element.
       if (ph_in_char == 0)
       {        //if we see that we have been sent a null command.
         i = 0; //reset the counter i to 0.
@@ -362,10 +487,10 @@ void measure_pH(String cmd_code)
   }
   ph_serial_event = false; //reset the serial event flag.
   //Uncomment this section if you want to take the pH value and convert it into floating point number.
-  atlas_scientific_ph = atof(ph_data);                           //Converts the array to a float value which we will send via MQTT
-  String pH_string = String((float)atlas_scientific_ph);         //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
-}
-void ec_string_pars(char *ec_data_pars)
+  atlas_scientific_ph = atof(ph_data);                   //Converts the array to a float value which we will send via MQTT
+  String pH_string = String((float)atlas_scientific_ph); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
+}*/
+/*void ec_string_pars(char *ec_data_pars)
 { //this function will break up the CSV string into its 4 individual parts. EC|TDS|SAL|SG.
   //this is done using the C command “strtok”.
 
@@ -374,42 +499,40 @@ void ec_string_pars(char *ec_data_pars)
   sal = strtok(NULL, ",");        //let's pars the string at each comma.
   sg = strtok(NULL, ",");         //let's pars the string at each comma.
 
-
   //uncomment this section if you want to take the values and convert them into floating point number.
-  
-    ec_float=atof(ec);
-    tds_float=atof(tds);
-    sal_float=atof(sal);
-    sg_float=atof(sg);
 
-  Serial.print("EC:"); //we now print each value we parsed separately.
-  Serial.println(ec_float);  //this is the EC value.
+  ec_float = atof(ec);
+  tds_float = atof(tds);
+  sal_float = atof(sal);
+  sg_float = atof(sg);
 
-  Serial.print("TDS:"); //we now print each value we parsed separately.
-  Serial.println(tds_float);  //this is the TDS value.
+  Serial.print("EC:");      //we now print each value we parsed separately.
+  Serial.println(ec_float); //this is the EC value.
 
-  Serial.print("SAL:"); //we now print each value we parsed separately.
-  Serial.println(sal_float);  //this is the salinity value.
+  Serial.print("TDS:");      //we now print each value we parsed separately.
+  Serial.println(tds_float); //this is the TDS value.
 
-  Serial.print("SG:"); //we now print each value we parsed separately.
-  Serial.println(sg_float);  //this is the specific gravity.
-  Serial.println();    //this just makes the output easier to read by adding an extra blank line
+  Serial.print("SAL:");      //we now print each value we parsed separately.
+  Serial.println(sal_float); //this is the salinity value.
 
-
-}
-void measure_EC(String cmd_code)
+  Serial.print("SG:");      //we now print each value we parsed separately.
+  Serial.println(sg_float); //this is the specific gravity.
+  Serial.println();         //this just makes the output easier to read by adding an extra blank line
+}*/
+/*void measure_EC(String cmd_code)
 {
   Serial.print("Copying String to char!");
   //int ec_code_length = cmd_code.length();    //Gets the length of the string to be used in the for loop later
   strcpy(ec_computerdata, cmd_code.c_str()); // copying the contents of the string to char array
-    Serial.print("All to lower case to char!");
+  Serial.print("All to lower case to char!");
   for (int i = 0; i <= 20; i++)
-  {                                                   //set all char to lower case, this is just so this exact sample code can recognize the "sleep" command.
+  { //set all char to lower case, this is just so this exact sample code can recognize the "sleep" command.
     //ec_computerdata[i] = tolower(ec_computerdata[i]); //"Sleep" ≠ "sleep"
   }
   int i = 0; //reset i, we will need it later
-  if (ec_computerdata[0] == 'c' || ec_computerdata[0] == 'r'){
-  Serial.print("Setting time to wait for reading/calbiration");
+  if (ec_computerdata[0] == 'c' || ec_computerdata[0] == 'r')
+  {
+    Serial.print("Setting time to wait for reading/calbiration");
     time_ec = 600; //if a command has been sent to calibrate or take a reading we wait 570ms so that the circuit has time to take the reading.
   }
   else
@@ -461,100 +584,8 @@ void measure_EC(String cmd_code)
     Serial.println();        //this just makes the output easier to read by adding an extra blank line
   }
 
-  if (ec_computerdata[0] == 'r'){
-  //ec_string_pars(ec_data); //uncomment this function if you would like to break up the comma separated string into its individual parts.
-  }
-}
-void mqtt_callback(char *topic, byte *payload, unsigned int length)
-{
-  Serial.print("Message arrived in topic: ");
-  Serial.println(topic);
-  String tmp_topic = topic;
-  char msg[length];
-  if (tmp_topic == "aeroponic/B1/pH/command")
+  if (ec_computerdata[0] == 'r')
   {
-    Serial.print("Message:");
-    for (int i = 0; i < length; i++)
-    {
-      Serial.print((char)payload[i]);
-      msg[i] = (char)payload[i];
-    }
-    measure_pH(String(msg));
+    //ec_string_pars(ec_data); //uncomment this function if you would like to break up the comma separated string into its individual parts.
   }
-    if (tmp_topic == "aeroponic/B1/EC/command")
-  {
-    Serial.print("Message:");
-    for (int i = 0; i < length; i++)
-    {
-      //Serial.print((char)payload[i]);
-      msg[i] = (char)payload[i];
-    }
-    Serial.print(msg);
-    measure_EC(String(msg));
-  }
-}
-void setup()
-{
-  Serial.begin(9600);                          // Initialize the I2C bus (BH1750 library doesn't do this automatically)
-  Wire.begin(D2, D1);                                // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
-  client.setCallback(mqtt_callback);           //Tells the pubsubclient which function to use in case of a callback
-  #if HWTYPE == 0
-  dallassensors.begin();                       //Activates the DS18b20 sensors on the one wire
-  numDevices = dallassensors.getDeviceCount(); //Stores the DS18BB20 addresses on the ONEWIRE
-  
-  if (!bme.begin(0x76))
-  { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
-    Serial.println(F("Could not find first BME280 sensor, check wiring!"));
-    //while (1)
-    //delay(10);
-  }
-  #endif
-}
-void loop()
-{ //This function will continously be executed; everything which needs to be done recurringly is set here.
-  unsigned long now = millis();
-  if (WiFi.status() != WL_CONNECTED)
-  {
-    connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
-  }
-  if (!client.connected())
-  {
-    connect_MQTT(mqtt_server, 1883);
-  }
-  client.loop();
-  
-  if ((now - mainLoop) > 5000)
-  {
-    mainLoop = now;
-    /*
-    measure_bme280(0);
-    send_data_MQTT(String(bme280_temp), temp_bme280_topic_1);
-    send_data_MQTT(String(bme280_humidity), humidity_bme280_topic_1);
-    send_data_MQTT(String(bme280_pressure), pressure_bme280_topic_1);
-    measure_bme280(7);
-    send_data_MQTT(String(bme280_temp), temp_bme280_topic_2);
-    send_data_MQTT(String(bme280_humidity), humidity_bme280_topic_2);
-    send_data_MQTT(String(bme280_pressure), pressure_bme280_topic_2);
-    measure_ds18b20();
-    send_data_MQTT(String(dallas_temp_0), temp_ds18b20_topic_1);
-    send_data_MQTT(String(dallas_temp_1), temp_ds18b20_topic_2);
-    //send_data_MQTT(String(dallas_temp_2), temp_ds18b20_topic_3);
-    */
-  }
- 
-  /*if (now - pHLoop > 3000000)
-  {
-    pHLoop = now;
-    measure_pH("reading");
-    send_data_MQTT(String(atlas_scientific_ph), pH_ezo_topic_1);
-    delay(50);
-    measure_pH("sleep");
-  }*/
-   /*if ((now - soilLoop) > 600000)
-  {
-    soilLoop = now;
-    measure_soil();
-  //send_data_MQTT(String(soil_moisture), soil_moisture_topic);
-  }*/
-
-}
+}*/
