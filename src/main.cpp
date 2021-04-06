@@ -30,18 +30,11 @@ DallasTemperature dallassensors(&oneWire); // Pass our oneWire reference to Dall
 DeviceAddress tempDeviceAddress;           // We'll use this variable to store a found device address for the DS18B20
 
 //Initialization of all environmental variables as global to share them between functions
-float bme280_temp;     //Sets the variable temp to the temp measure of the BME280
-float bme280_humidity; //Sets variable bme_humidity to humidity measure of BME280
-float bme280_pressure; //Sets variable bme_pressure to pressure measire of BME280
-float bme280_altitude; //Sets the altitutde variable bme_altitutde to zero
-float dallas_temp_0;   //Sets variable for the first DS18B20 found on the bus
-float dallas_temp_1;   //Sets variable for the first DS18B20 found on the bus
-float dallas_temp_2;   //Sets variable for the first DS18B20 found on the bus
+float bme280_temp, bme280_humidity, bme280_pressure, bme280_altitude; //Sets the altitutde variable bme_altitutde to zero
+float dallas_temp_0, dallas_temp_1, dallas_temp_2;   //Sets variable for the first DS18B20 found on the bus
 
 //Initialization of all environmental variables as global to share them between functions
-String dallas_temp_0_string; //Variable needed for MQTT transmission of DS18B20 measurements
-String dallas_temp_1_string; //Variable needed for MQTT transmission of DS18B20 measurements
-String dallas_temp_2_string; //Variable needed for MQTT transmission of DS18B20 measurements
+String dallas_temp_0_string, dallas_temp_1_string, String dallas_temp_2_string; //Variable needed for MQTT transmission of DS18B20 measurements
 #else
 
 #include <Ezo_i2c.h> //include the EZO I2C library from https://github.com/Atlas-Scientific/Ezo_I2c_lib
@@ -56,10 +49,7 @@ String atlas_scientific_ph_string; //Variable to store pH value for MQTT transmi
 #define soilPin D5 //Defines D5 as output pin connected to VCC on moisture sensore. Reduces
 
 float ph_float;  //float var used to hold float of pH value
-float ec_float;  //float var used to hold the float value of the conductivity.
-float tds_float; //float var used to hold the float value of the TDS.
-float sal_float; //float var used to hold the float value of the salinity.
-float sg_float;  //float var used to hold the float value of the specific gravity.
+float ec_float, tds_float, sal_float, sg_float;  //float var used to hold the float value of the specific gravity.
 
 int soil_moisture;
 
@@ -374,17 +364,31 @@ void loop()
   {
     pHLoop = now;
     //measure_pH("reading");
+    //receive_reading(EC);
     EC.send_read_cmd();
     if (EC.is_read_poll())
     {
+      EC.receive_read_cmd(); //get the response data and put it into the [Sensor].reading variable if successful
       ec_float = EC.get_last_received_reading();
-      send_data_MQTT(String(ec_float), ec_ezo_topic_1);
+      Serial.print("EC: ");
+      Serial.println(ec_float);
+      Serial.print("");
+      if(ec_float > 0){
+        send_data_MQTT(String(ec_float), ec_ezo_topic_1);
+      }
+      
     }
     PH.send_read_cmd();
     if (PH.is_read_poll())
     {
+      PH.receive_read_cmd(); //get the response data and put it into the [Sensor].reading variable if successful
       ph_float = PH.get_last_received_reading();
-      send_data_MQTT(String(ph_float), pH_ezo_topic_1);
+      Serial.print("pH: ");
+      Serial.println(ph_float);
+      Serial.print("");
+      if(ph_float > 0){
+        send_data_MQTT(String(ph_float), pH_ezo_topic_1);
+      }
     }
     Serial.println();
   }
