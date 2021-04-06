@@ -12,9 +12,21 @@ Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Contro
 #include "PubSubClient.h" // Allows us to connect to, and publish to the MQTT broker
 #include <TaskScheduler.h>
 
+String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId(), HEX); //String(random(0xffff), HEX); // Create a random client ID
+const char *clientID = nameBuffer.c_str();
+
 WiFiClient wifiClient;                                   // Initialise the WiFi and MQTT Client objects
 PubSubClient client("192.168.178.29", 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
+Scheduler tskscheduler;
 
+//Function stubs so TaskScheduler doesnt complain
+void startSensors();
+Task taskStartSensors(TASK_SECOND, TASK_ONCE, &startSensors);
+
+// MQTT 1 & 2
+// These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
+const char *mqtt_server = "192.168.178.29";                                          //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+String mqtt_connection_topic = "aeroponic/" + String(TENTNO) +"/connection/"+ String(clientID);        //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 #if HWTYPE == 0
 //#include <SPI.h>
 #include "OneWire.h"           //Adds library needed to initialize and use the 1-Wire protocoll for DS18B20 sensors
@@ -22,6 +34,15 @@ PubSubClient client("192.168.178.29", 1883, wifiClient); // 1883 is the listener
 #include "Adafruit_BME280.h"   //Adds library for the BME280 (Bosch) environmental sensor
 #include "Adafruit_Sensor.h"   //Adds library for all Adafruit sensors to make them usable
 #define TCAADDR 0x70
+
+//Functions stubs so VSCode doesn't complain
+void read_bme280();
+void read_ds18b20();
+void read_soilmoisture();
+
+Task taskBME280(TASK_SECOND * 5, TASK_FOREVER, &read_bme280);
+Task taskDS18B20(TASK_SECOND * 5, TASK_FOREVER, &read_ds18b20);
+Task taskSoilMoisture(TASK_MINUTE*10, TASK_FOREVER, &read_soilmoisture);
 
 Adafruit_BME280 bme; // Create BME280 instance for the first sensor
 
@@ -38,6 +59,23 @@ float dallas_temp_0, dallas_temp_1, dallas_temp_2;                    //Sets var
 
 //Initialization of all environmental variables as global to share them between functions
 String dallas_temp_0_string, dallas_temp_1_string, String dallas_temp_2_string; //Variable needed for MQTT transmission of DS18B20 measurements
+
+#define sensorPin A0 //Sets analoge pin as sensor input for soilsensor
+#define soilPin D5 //Defines D5 as output pin connected to VCC on moisture sensore. Reduces
+int soil_moisture;
+unsigned long soilLoop = 0; //Needed for the millis() loop function
+
+
+String temp_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor1";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String humidity_bme280_topic_1 = "aeroponic/"+ String(TENTNO) + "/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *pressure_bme280_topic_1 = "aeroponic/growtent2/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *temp_bme280_topic_2 = "aeroponic/growtent2/temperature/bme280/sensor2";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *humidity_bme280_topic_2 = "aeroponic/growtent2/humidity/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *pressure_bme280_topic_2 = "aeroponic/growtent2/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *temp_ds18b20_topic_1 = "aeroponic/growtent2/temperature/d18b20/sensor1"; //Adds MQTT topic for the dallas sensor 1 in the root zone
+const char *temp_ds18b20_topic_2 = "aeroponic/growtent2/temperature/d18b20/sensor2"; //Adds MQTT topic for the dallas senssor 2
+const char *temp_ds18b20_topic_3 = "aeroponic/growtent2/temperature/d18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
+String soil_moisture_topic = "aeroponic/" + String(TENTNO) +"/soil_moisture/sensor1";       //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 #else
 
 #include <Ezo_i2c.h> //include the EZO I2C library from https://github.com/Atlas-Scientific/Ezo_I2c_lib
@@ -52,52 +90,19 @@ float ph_float;                                 //float var used to hold float o
 float ec_float, tds_float, sal_float, sg_float; //float var used to hold the float value of the specific gravity.
 
 String atlas_scientific_ph_string; //Variable to store pH value for MQTT transmission
-#endif
 
-#define sensorPin A0
-#define soilPin D5 //Defines D5 as output pin connected to VCC on moisture sensore. Reduces
-int soil_moisture;
-
-//Function stubs so TaskScheduler doesnt complain
-void startSensors();
-void read_bme280();
-void read_ds18b20();
+//Function stubs for TaskScheduler so VSCode doesn't complain
 void read_EC();
 void read_PH();
-
-Task taskStartSensors(TASK_SECOND, TASK_ONCE, &startSensors);
-Task taskBME280(TASK_SECOND * 5, TASK_FOREVER, &read_bme280);
-Task taskDS18B20(TASK_SECOND * 5, TASK_FOREVER, &read_ds18b20);
+//Initialize task to read EC & pH
 Task taskReadEC(TASK_MINUTE, TASK_FOREVER, &read_EC);
 Task taskReadPH(TASK_MINUTE, TASK_FOREVER, &read_PH);
-
-Scheduler tskscheduler;
-
-// MQTT 1 & 2
-// These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
-const char *mqtt_server = "192.168.178.29";                                          //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-String temp_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor1";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
-String humidity_bme280_topic_1 = "aeroponic/"+ String(TENTNO) + "/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *pressure_bme280_topic_1 = "aeroponic/growtent2/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *temp_bme280_topic_2 = "aeroponic/growtent2/temperature/bme280/sensor2";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *humidity_bme280_topic_2 = "aeroponic/growtent2/humidity/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *pressure_bme280_topic_2 = "aeroponic/growtent2/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *temp_ds18b20_topic_1 = "aeroponic/growtent2/temperature/d18b20/sensor1"; //Adds MQTT topic for the dallas sensor 1 in the root zone
-const char *temp_ds18b20_topic_2 = "aeroponic/growtent2/temperature/d18b20/sensor2"; //Adds MQTT topic for the dallas senssor 2
-const char *temp_ds18b20_topic_3 = "aeroponic/growtent2/temperature/d18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
+//MQTT: Include the following topics to send data value correctly for pH and EC
 String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) +"/ph/ezo_circuit/sensor1";           //Adds MQTT topic for the AtlasScientific pH probe
-String pH_command_topic = "aeroponic/" + String(TENTNO) +"/pH/AtlasScientific/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+String pH_command_topic = "aeroponic/" + String(TENTNO) +"/ph/ezo_circuit/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 String ec_ezo_topic_1 = "aeroponic/"+ String(TENTNO) +"/ec/ezo_circuit/sensor1";           //Adds MQTT topic for the AtlasScientific pH probe
-const char *ec_command_topic = "aeroponic/growtent2/ec/AtlasScientific/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
-const char *mqtt_connection_topic = "aeroponic/growtent2/connection/sensor1";        //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
-const char *soil_moisture_topic = "aeroponic/growtent2/soil_moisture/sensor1";       //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
-
-String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId(), HEX); //String(random(0xffff), HEX); // Create a random client ID
-const char *clientID = nameBuffer.c_str();
-//const char *clientID = "ESP-Table1_Test_1"; // The client id identifies the ESP8266 device. In this experiment we will use ESP-Table_X-Y (X = Table No, Y = Microcontroller No) Think of it a bit like a hostname (Or just a name, like Greg).
-unsigned long mainLoop = 0; //Needed for the millis() loop function
-unsigned long soilLoop = 0; //Needed for the millis() loop function
-unsigned long pHLoop = 0;   //Needed for the millis() of the pH Function to check if 5 minutes are over
+String ec_command_topic = "aeroponic/" + String(TENTNO) +"/ec/ezo_circuit/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+#endif
 
 void startSensors()
 {
@@ -204,24 +209,6 @@ void send_data_MQTT(String value, String topic)
     }
   }
 }
-/*void measure_distance_ultrasonic(){
-int trigger=D7;                        // Der Trigger Pin
-int echo=D8;                                  // Der Echo Pin
-float usonic_time=0;                                // Hier wird die Zeitdauer abgespeichert// die die Ultraschallwelle braucht// um zum Sensor zurückzukommen
-float distance_measured=0;                           // Hier wird die Entfernung vom  // Hindernis abgespeichert 
-pinMode(trigger, OUTPUT);
-pinMode(echo, INPUT);
-digitalWrite(trigger, LOW);              // Den Trigger auf LOW setzen um// ein rauschfreies Signal// senden zu können
-delay(5);                                // 5 Millisekunden warten
-digitalWrite(trigger, HIGH);             // Den Trigger auf HIGH setzen um eine // Ultraschallwelle zu senden
-delay(10);                               // 10 Millisekunden warten
-digitalWrite(trigger, LOW);              // Trigger auf LOW setzen um das  // Senden abzuschließen
-usonic_time = pulseIn(echo, HIGH);             // Die Zeit messen bis die // Ultraschallwelle zurückkommt
-distance_measured = ((usonic_time/2)/29.1); // 29.1;           // Die Zeit in den Weg in Zentimeter umrechnen
-Serial.print(distance_measured);            // Den Weg in Zentimeter ausgeben
-Serial.println(" cm");               //
-delay(1000);      
-}*/
 #if HWTYPE == 0
 void tca_bus_select(uint8_t i)
 {
@@ -356,6 +343,25 @@ void read_EC()
     }
   }
 }
+/*void measure_distance_ultrasonic(){
+int trigger=D7;                        // Der Trigger Pin
+int echo=D8;                                  // Der Echo Pin
+float usonic_time=0;                                // Hier wird die Zeitdauer abgespeichert// die die Ultraschallwelle braucht// um zum Sensor zurückzukommen
+float distance_measured=0;                           // Hier wird die Entfernung vom  // Hindernis abgespeichert 
+pinMode(trigger, OUTPUT);
+pinMode(echo, INPUT);
+digitalWrite(trigger, LOW);              // Den Trigger auf LOW setzen um// ein rauschfreies Signal// senden zu können
+delay(5);                                // 5 Millisekunden warten
+digitalWrite(trigger, HIGH);             // Den Trigger auf HIGH setzen um eine // Ultraschallwelle zu senden
+delay(10);                               // 10 Millisekunden warten
+digitalWrite(trigger, LOW);              // Trigger auf LOW setzen um das  // Senden abzuschließen
+usonic_time = pulseIn(echo, HIGH);             // Die Zeit messen bis die // Ultraschallwelle zurückkommt
+distance_measured = ((usonic_time/2)/29.1); // 29.1;           // Die Zeit in den Weg in Zentimeter umrechnen
+Serial.print(distance_measured);            // Den Weg in Zentimeter ausgeben
+Serial.println(" cm");               //
+delay(1000);      
+}*/
+
 #endif
 void receive_reading(Ezo_board &Sensor)
 { // function to decode the reading after the read command was issued
