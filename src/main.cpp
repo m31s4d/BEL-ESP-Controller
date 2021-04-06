@@ -209,6 +209,34 @@ void send_data_MQTT(String value, String topic)
     }
   }
 }
+void mqtt_callback(char *topic, byte *payload, unsigned int length)
+{
+  Serial.print("Message arrived in topic: ");
+  Serial.println(topic);
+  String tmp_topic = topic;
+  char msg[length];
+  if (tmp_topic == pH_command_topic)
+  {
+    Serial.print("Message:");
+    for (int i = 0; i < length; i++)
+    {
+      Serial.print((char)payload[i]);
+      msg[i] = (char)payload[i];
+    }
+    PH.send_cmd(msg);
+  }
+  if (tmp_topic == ec_command_topic)
+  {
+    Serial.print("Message:");
+    for (int i = 0; i < length; i++)
+    {
+      //Serial.print((char)payload[i]);
+      msg[i] = (char)payload[i];
+    }
+    Serial.print(msg);
+    EC.send_cmd(msg);
+  }
+}
 #if HWTYPE == 0
 void tca_bus_select(uint8_t i)
 {
@@ -233,9 +261,9 @@ void measure_bme280(int tca_bus)
 void read_bme280()
 {
   measure_bme280(0);
-  send_data_MQTT(String(bme280_temp), temp_bme280_topic_1);
-  send_data_MQTT(String(bme280_humidity), humidity_bme280_topic_1);
-  send_data_MQTT(String(bme280_pressure), pressure_bme280_topic_1);
+  send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_1));
+  send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_1));
+  send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_1));
   measure_bme280(7);
   send_data_MQTT(String(bme280_temp), temp_bme280_topic_2);
   send_data_MQTT(String(bme280_humidity), humidity_bme280_topic_2);
@@ -343,26 +371,6 @@ void read_EC()
     }
   }
 }
-/*void measure_distance_ultrasonic(){
-int trigger=D7;                        // Der Trigger Pin
-int echo=D8;                                  // Der Echo Pin
-float usonic_time=0;                                // Hier wird die Zeitdauer abgespeichert// die die Ultraschallwelle braucht// um zum Sensor zurückzukommen
-float distance_measured=0;                           // Hier wird die Entfernung vom  // Hindernis abgespeichert 
-pinMode(trigger, OUTPUT);
-pinMode(echo, INPUT);
-digitalWrite(trigger, LOW);              // Den Trigger auf LOW setzen um// ein rauschfreies Signal// senden zu können
-delay(5);                                // 5 Millisekunden warten
-digitalWrite(trigger, HIGH);             // Den Trigger auf HIGH setzen um eine // Ultraschallwelle zu senden
-delay(10);                               // 10 Millisekunden warten
-digitalWrite(trigger, LOW);              // Trigger auf LOW setzen um das  // Senden abzuschließen
-usonic_time = pulseIn(echo, HIGH);             // Die Zeit messen bis die // Ultraschallwelle zurückkommt
-distance_measured = ((usonic_time/2)/29.1); // 29.1;           // Die Zeit in den Weg in Zentimeter umrechnen
-Serial.print(distance_measured);            // Den Weg in Zentimeter ausgeben
-Serial.println(" cm");               //
-delay(1000);      
-}*/
-
-#endif
 void receive_reading(Ezo_board &Sensor)
 { // function to decode the reading after the read command was issued
 
@@ -390,34 +398,26 @@ void receive_reading(Ezo_board &Sensor)
     break;
   }
 }
-void mqtt_callback(char *topic, byte *payload, unsigned int length)
-{
-  Serial.print("Message arrived in topic: ");
-  Serial.println(topic);
-  String tmp_topic = topic;
-  char msg[length];
-  if (tmp_topic == pH_command_topic)
-  {
-    Serial.print("Message:");
-    for (int i = 0; i < length; i++)
-    {
-      Serial.print((char)payload[i]);
-      msg[i] = (char)payload[i];
-    }
-    PH.send_cmd(msg);
-  }
-  if (tmp_topic == ec_command_topic)
-  {
-    Serial.print("Message:");
-    for (int i = 0; i < length; i++)
-    {
-      //Serial.print((char)payload[i]);
-      msg[i] = (char)payload[i];
-    }
-    Serial.print(msg);
-    EC.send_cmd(msg);
-  }
-}
+/*void measure_distance_ultrasonic(){
+int trigger=D7;                        // Der Trigger Pin
+int echo=D8;                                  // Der Echo Pin
+float usonic_time=0;                                // Hier wird die Zeitdauer abgespeichert// die die Ultraschallwelle braucht// um zum Sensor zurückzukommen
+float distance_measured=0;                           // Hier wird die Entfernung vom  // Hindernis abgespeichert 
+pinMode(trigger, OUTPUT);
+pinMode(echo, INPUT);
+digitalWrite(trigger, LOW);              // Den Trigger auf LOW setzen um// ein rauschfreies Signal// senden zu können
+delay(5);                                // 5 Millisekunden warten
+digitalWrite(trigger, HIGH);             // Den Trigger auf HIGH setzen um eine // Ultraschallwelle zu senden
+delay(10);                               // 10 Millisekunden warten
+digitalWrite(trigger, LOW);              // Trigger auf LOW setzen um das  // Senden abzuschließen
+usonic_time = pulseIn(echo, HIGH);             // Die Zeit messen bis die // Ultraschallwelle zurückkommt
+distance_measured = ((usonic_time/2)/29.1); // 29.1;           // Die Zeit in den Weg in Zentimeter umrechnen
+Serial.print(distance_measured);            // Den Weg in Zentimeter ausgeben
+Serial.println(" cm");               //
+delay(1000);      
+}*/
+#endif
+
 void setup()
 {
   Serial.begin(9600);                // Initialize the I2C bus (BH1750 library doesn't do this automatically)
