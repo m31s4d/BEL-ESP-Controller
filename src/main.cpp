@@ -16,7 +16,7 @@ String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId(), HEX); //String(random
 const char *clientID = nameBuffer.c_str();
 
 WiFiClient wifiClient;                                   // Initialise the WiFi and MQTT Client objects
-PubSubClient client("192.168.178.29", 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
+PubSubClient client("192.168.0.121", 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
 Scheduler tskscheduler;
 
 //Function stubs so TaskScheduler doesnt complain
@@ -25,8 +25,8 @@ Task taskStartSensors(TASK_SECOND, TASK_ONCE, &startSensors);
 
 // MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
-const char *mqtt_server = "192.168.178.29";                                          //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-String mqtt_connection_topic = "aeroponic/" + String(TENTNO) +"/connection/"+ String(clientID);        //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
+const char *mqtt_server = "192.168.0.121";                                                       //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+String mqtt_connection_topic = "aeroponic/" + String(TENTNO) + "/connection/" + String(clientID); //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 #if HWTYPE == 0
 //#include <SPI.h>
 #include "OneWire.h"           //Adds library needed to initialize and use the 1-Wire protocoll for DS18B20 sensors
@@ -42,7 +42,7 @@ void read_soilmoisture();
 
 Task taskBME280(TASK_SECOND * 5, TASK_FOREVER, &read_bme280);
 Task taskDS18B20(TASK_SECOND * 5, TASK_FOREVER, &read_ds18b20);
-Task taskSoilMoisture(TASK_MINUTE*10, TASK_FOREVER, &read_soilmoisture);
+Task taskSoilMoisture(TASK_MINUTE * 10, TASK_FOREVER, &read_soilmoisture);
 
 Adafruit_BME280 bme; // Create BME280 instance for the first sensor
 
@@ -61,24 +61,23 @@ float dallas_temp_0, dallas_temp_1, dallas_temp_2;                    //Sets var
 String dallas_temp_0_string, dallas_temp_1_string, String dallas_temp_2_string; //Variable needed for MQTT transmission of DS18B20 measurements
 
 #define sensorPin A0 //Sets analoge pin as sensor input for soilsensor
-#define soilPin D5 //Defines D5 as output pin connected to VCC on moisture sensore. Reduces
+#define soilPin D5   //Defines D5 as output pin connected to VCC on moisture sensore. Reduces
 int soil_moisture;
 unsigned long soilLoop = 0; //Needed for the millis() loop function
 
-
 String temp_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor1";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
-String humidity_bme280_topic_1 = "aeroponic/"+ String(TENTNO) + "/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *pressure_bme280_topic_1 = "aeroponic/growtent2/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *temp_bme280_topic_2 = "aeroponic/growtent2/temperature/bme280/sensor2";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *humidity_bme280_topic_2 = "aeroponic/growtent2/humidity/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *pressure_bme280_topic_2 = "aeroponic/growtent2/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *temp_ds18b20_topic_1 = "aeroponic/growtent2/temperature/d18b20/sensor1"; //Adds MQTT topic for the dallas sensor 1 in the root zone
-const char *temp_ds18b20_topic_2 = "aeroponic/growtent2/temperature/d18b20/sensor2"; //Adds MQTT topic for the dallas senssor 2
-const char *temp_ds18b20_topic_3 = "aeroponic/growtent2/temperature/d18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
-String soil_moisture_topic = "aeroponic/" + String(TENTNO) +"/soil_moisture/sensor1";       //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
+String humidity_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *pressure_bme280_topic_1 = "aeroponic/growtent2/pressure/bme280/sensor1";         //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *temp_bme280_topic_2 = "aeroponic/growtent2/temperature/bme280/sensor2";          //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *humidity_bme280_topic_2 = "aeroponic/growtent2/humidity/bme280/sensor2";         //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *pressure_bme280_topic_2 = "aeroponic/growtent2/pressure/bme280/sensor2";         //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *temp_ds18b20_topic_1 = "aeroponic/growtent2/temperature/d18b20/sensor1";         //Adds MQTT topic for the dallas sensor 1 in the root zone
+const char *temp_ds18b20_topic_2 = "aeroponic/growtent2/temperature/d18b20/sensor2";         //Adds MQTT topic for the dallas senssor 2
+const char *temp_ds18b20_topic_3 = "aeroponic/growtent2/temperature/d18b20/sensor3";         //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
+String soil_moisture_topic = "aeroponic/" + String(TENTNO) + "/soil_moisture/sensor1";       //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 #else
 
-#include <Ezo_i2c.h> //include the EZO I2C library from https://github.com/Atlas-Scientific/Ezo_I2c_lib
+#include <Ezo_i2c.h>      //include the EZO I2C library from https://github.com/Atlas-Scientific/Ezo_I2c_lib
 #include "Ezo_i2c_util.h" //brings in common print statements
 Ezo_board PH = Ezo_board(99, "PH");  //create a PH circuit object, who's address is 99 and name is "PH"
 Ezo_board EC = Ezo_board(100, "EC"); //create an EC circuit object who's address is 100 and name is "EC"
@@ -86,9 +85,8 @@ Ezo_board EC = Ezo_board(100, "EC"); //create an EC circuit object who's address
 char *sensordata_buffer_ezo;
 uint8_t buffer_len_ezo;
 
-float ph_float;                                 //float var used to hold float of pH value
+float ph_float; //float var used to hold float of pH value
 float ec_float; //float var used to hold the float value of the specific gravity.
-
 
 //Function stubs for TaskScheduler so VSCode doesn't complain
 void read_EC();
@@ -96,16 +94,16 @@ void parse_EC();
 void read_PH();
 void parse_PH();
 
-//Initialize task to read EC & pH
-Task taskReadEC(TASK_SECOND *15, TASK_FOREVER, &read_EC);
-Task taskParseEC(TASK_SECOND* 20, TASK_FOREVER, &parse_EC);
+//Initialize task to read/parse EC & pH
+Task taskReadEC(TASK_SECOND * 10, TASK_FOREVER, &read_EC);
+Task taskParseEC(TASK_SECOND * 35, TASK_FOREVER, &parse_EC);
 Task taskReadPH(TASK_MINUTE, TASK_FOREVER, &read_PH);
-Task taskParsePH(TASK_SECOND* 65, TASK_FOREVER, &parse_PH);
+Task taskParsePH(TASK_SECOND * 65, TASK_FOREVER, &parse_PH);
 //MQTT: Include the following topics to send data value correctly for pH and EC
-String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) +"/ph/ezo_circuit/sensor1";           //Adds MQTT topic for the AtlasScientific pH probe
-String pH_command_topic = "aeroponic/" + String(TENTNO) +"/ph/ezo_circuit/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
-String ec_ezo_topic_1 = "aeroponic/"+ String(TENTNO) +"/ec/ezo_circuit/sensor1";           //Adds MQTT topic for the AtlasScientific pH probe
-String ec_command_topic = "aeroponic/" + String(TENTNO) +"/ec/ezo_circuit/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ph/ezo_circuit/sensor1";   //Adds MQTT topic for the AtlasScientific pH probe
+String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/ezo_circuit/command"; //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+String ec_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ec/ezo_circuit/sensor1";   //Adds MQTT topic for the AtlasScientific pH probe
+String ec_command_topic = "aeroponic/" + String(TENTNO) + "/ec/ezo_circuit/command"; //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 #endif
 
 void startSensors()
@@ -183,7 +181,7 @@ void connect_MQTT(const char *var_mqtt_client, int port_num)
     //Following are test topics
     //delay(100);
     //client.publish(mqtt_connection_topic_1, "on");
-    client.subscribe("aeroponic/B1/EC/command");
+    //client.subscribe("aeroponic/B1/EC/command");
   }
   else
   {
@@ -238,7 +236,6 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length)
       msg[i] = (char)payload[i];
     }
     Serial.print(msg);
-    EC.send_cmd(msg);
   }
 }
 #if HWTYPE == 0
@@ -345,13 +342,15 @@ void measure_soil()
 #else
 void read_PH()
 {
-   if(taskReadPH.isFirstIteration()){ //Enables the parsing/sending of pH values 
+  if (taskReadPH.isFirstIteration())
+  { //Enables the parsing/sending of pH values
     tskscheduler.addTask(taskParsePH);
     taskParsePH.enable();
   }
   PH.send_read_cmd();
 }
-void parse_PH(){
+void parse_PH()
+{
   if (PH.is_read_poll())
   {
     PH.receive_read_cmd(); //get the response data and put it into the [Sensor].reading variable if successful
@@ -367,18 +366,21 @@ void parse_PH(){
 }
 void read_EC() //Reading and requesting data from EZO circuits need to be split up. Otherwise board is not ready and reading will be 0.
 {
-  if(taskReadEC.isFirstIteration()){
+  //Ezo circuit requires pull-up resistors on SDA and SCL! Also only stable with 5V!
+  if (taskReadEC.isFirstIteration())
+  {
     tskscheduler.addTask(taskParseEC);
     taskParseEC.enable();
   }
   EC.send_read_cmd();
 }
-void parse_EC(){
-  EC.receive_read_cmd();
+void parse_EC()
+{
+  EC.receive_read_cmd(); //Requests the last reading saved in the EZO circuit
   if (EC.is_read_poll())
   {
-    Serial.print("Error type: ");
-    Serial.println(EC.get_error());
+    //Serial.print("Error type: ");
+    //Serial.println(EC.get_error());
     ec_float = EC.get_last_received_reading();
     Serial.print("EC: ");
     Serial.println(ec_float);
@@ -408,26 +410,26 @@ Serial.println(" cm");               //
 delay(1000);      
 }*/
 #endif
-
 void setup()
 {
   Serial.begin(9600);                // Initialize the I2C bus (BH1750 library doesn't do this automatically)
-  Wire.begin();                // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
+  Wire.begin();                      // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
   client.setCallback(mqtt_callback); //Tells the pubsubclient which function to use in case of a callback
-  print_device_info(EC);
-  tskscheduler.addTask(taskStartSensors);
-  taskStartSensors.enable();
+
+  tskscheduler.addTask(taskStartSensors); //Adds task to scheduler list
+  taskStartSensors.enable(); //Enables the start sensors task
 }
 void loop()
 { //This function will continously be executed; everything which needs to be done recurringly is set here.
   unsigned long now = millis();
   if (WiFi.status() != WL_CONNECTED)
   {
-    connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
+    //connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
+    connect_wifi("Hood Lan","Ja17081994Yp08091992");
   }
   if (!client.connected())
   {
-    connect_MQTT(mqtt_server, 1883);
+    //connect_MQTT(mqtt_server, 1883);
   }
   tskscheduler.execute();
   client.loop();
