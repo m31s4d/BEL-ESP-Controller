@@ -79,7 +79,7 @@ String soil_moisture_topic = "aeroponic/" + String(TENTNO) +"/soil_moisture/sens
 #else
 
 #include <Ezo_i2c.h> //include the EZO I2C library from https://github.com/Atlas-Scientific/Ezo_I2c_lib
-//#include <Ezo_i2c_util.h> //brings in common print statements
+#include "Ezo_i2c_util.h" //brings in common print statements
 Ezo_board PH = Ezo_board(99, "PH");  //create a PH circuit object, who's address is 99 and name is "PH"
 Ezo_board EC = Ezo_board(100, "EC"); //create an EC circuit object who's address is 100 and name is "EC"
 
@@ -87,16 +87,20 @@ char *sensordata_buffer_ezo;
 uint8_t buffer_len_ezo;
 
 float ph_float;                                 //float var used to hold float of pH value
-float ec_float, tds_float, sal_float, sg_float; //float var used to hold the float value of the specific gravity.
+float ec_float; //float var used to hold the float value of the specific gravity.
 
-String atlas_scientific_ph_string; //Variable to store pH value for MQTT transmission
 
 //Function stubs for TaskScheduler so VSCode doesn't complain
 void read_EC();
+void parse_EC();
 void read_PH();
+void parse_PH();
+
 //Initialize task to read EC & pH
-Task taskReadEC(TASK_MINUTE, TASK_FOREVER, &read_EC);
+Task taskReadEC(TASK_SECOND *15, TASK_FOREVER, &read_EC);
+Task taskParseEC(TASK_SECOND* 20, TASK_FOREVER, &parse_EC);
 Task taskReadPH(TASK_MINUTE, TASK_FOREVER, &read_PH);
+Task taskParsePH(TASK_SECOND* 65, TASK_FOREVER, &parse_PH);
 //MQTT: Include the following topics to send data value correctly for pH and EC
 String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) +"/ph/ezo_circuit/sensor1";           //Adds MQTT topic for the AtlasScientific pH probe
 String pH_command_topic = "aeroponic/" + String(TENTNO) +"/ph/ezo_circuit/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
@@ -131,7 +135,7 @@ void startSensors()
     tskscheduler.addTask(taskReadEC);
     taskReadEC.enable();
     tskscheduler.addTask(taskReadPH);
-    taskReadPH.enable();
+    //taskReadPH.enable();
   }
 #endif
 }
@@ -341,7 +345,13 @@ void measure_soil()
 #else
 void read_PH()
 {
+   if(taskReadPH.isFirstIteration()){ //Enables the parsing/sending of pH values 
+    tskscheduler.addTask(taskParsePH);
+    taskParsePH.enable();
+  }
   PH.send_read_cmd();
+}
+void parse_PH(){
   if (PH.is_read_poll())
   {
     PH.receive_read_cmd(); //get the response data and put it into the [Sensor].reading variable if successful
@@ -355,12 +365,20 @@ void read_PH()
     }
   }
 }
-void read_EC()
+void read_EC() //Reading and requesting data from EZO circuits need to be split up. Otherwise board is not ready and reading will be 0.
 {
+  if(taskReadEC.isFirstIteration()){
+    tskscheduler.addTask(taskParseEC);
+    taskParseEC.enable();
+  }
   EC.send_read_cmd();
+}
+void parse_EC(){
+  EC.receive_read_cmd();
   if (EC.is_read_poll())
   {
-    EC.receive_read_cmd(); //get the response data and put it into the [Sensor].reading variable if successful
+    Serial.print("Error type: ");
+    Serial.println(EC.get_error());
     ec_float = EC.get_last_received_reading();
     Serial.print("EC: ");
     Serial.println(ec_float);
@@ -369,33 +387,6 @@ void read_EC()
     {
       send_data_MQTT(String(ec_float), String(ec_ezo_topic_1));
     }
-  }
-}
-void receive_reading(Ezo_board &Sensor)
-{ // function to decode the reading after the read command was issued
-
-  Serial.print(Sensor.get_name());
-  Serial.print(": "); // print the name of the circuit getting the reading
-
-  Sensor.receive_read_cmd(); //get the response data and put it into the [Sensor].reading variable if successful
-
-  switch (Sensor.get_error())
-  { //switch case based on what the response code is.
-  case Ezo_board::SUCCESS:
-    Serial.print(Sensor.get_last_received_reading()); //the command was successful, print the reading
-    break;
-
-  case Ezo_board::FAIL:
-    Serial.print("Failed "); //means the command has failed.
-    break;
-
-  case Ezo_board::NOT_READY:
-    Serial.print("Pending "); //the command has not yet been finished calculating.
-    break;
-
-  case Ezo_board::NO_DATA:
-    Serial.print("No Data "); //the sensor has no data to send.
-    break;
   }
 }
 /*void measure_distance_ultrasonic(){
@@ -421,8 +412,11 @@ delay(1000);
 void setup()
 {
   Serial.begin(9600);                // Initialize the I2C bus (BH1750 library doesn't do this automatically)
-  Wire.begin(D2, D1);                // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
+  Wire.begin();                // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
   client.setCallback(mqtt_callback); //Tells the pubsubclient which function to use in case of a callback
+  print_device_info(EC);
+  tskscheduler.addTask(taskStartSensors);
+  taskStartSensors.enable();
 }
 void loop()
 { //This function will continously be executed; everything which needs to be done recurringly is set here.
@@ -437,205 +431,4 @@ void loop()
   }
   tskscheduler.execute();
   client.loop();
-
-  /*if ((now - soilLoop) > 600000)
-  {
-    soilLoop = now;
-    measure_soil();
-  //send_data_MQTT(String(soil_moisture), soil_moisture_topic);
-  }*/
 }
-///////////////////////////////////////////////////////////////////////////////////////////
-/*
-#define pH_address 99               //default I2C ID number for EZO pH Circuit.
-char ph_computerdata[20];           //we make a 20 byte character array to hold incoming data from a pc/mac/other.
-byte ph_received_from_computer = 0; //we need to know how many characters have been received.
-byte ph_serial_event = 0;           //a flag to signal when data has been received from the pc/mac/other.
-byte ph_response_code = 0;          //used to hold the I2C response code.
-char ph_data[20];                   //we make a 20 byte character array to hold incoming data from the pH circuit.
-byte ph_in_char = 0;                //used as a 1 byte buffer to store inbound bytes from the pH Circuit.
-byte ph_counter = 0;                //counter used for ph_data array.
-int time_ph = 815;                  //used to change the delay needed depending on the command sent to the EZO Class pH Circuit.
-float atlas_scientific_ph;          //float var used to hold the float value of the pH.
-
-#define ec_address 0x64             //default I2C ID number for EZO EC Circuit.
-char ec_computerdata[20];           //we make a 20 byte character array to hold incoming data from a pc/mac/other.
-byte ec_received_from_computer = 0; //we need to know how many characters have been received.
-byte serial_event = 0;              //a flag to signal when data has been received from the pc/mac/other.
-byte ec_response_code = 0;          //used to hold the I2C response code.
-char ec_data[32];                   //we make a 32 byte character array to hold incoming data from the EC circuit.
-byte ec_in_char;                    //used as a 1 byte buffer to store inbound bytes from the EC Circuit.
-byte ec_counter = 0;                //counter used for ec_data array.
-int time_ec = 570;                  //used to change the delay needed depending on the command sent to the EZO Class EC Circuit.
-
-char *ec;  //char pointer used in string parsing.
-char *tds; //char pointer used in string parsing.
-char *sal; //char pointer used in string parsing.
-char *sg;  //char pointer used in string parsing.
-*/
-/*void measure_pH(String cmd_code)
-{
-  //calibration commands for EZO pH Circuit: cal, mid, 7 --> cal, low, "number of calibration solution", cal, high, 7 "number of calibration solution"
-  int i;
-  int code_length = cmd_code.length();       //Gets the length of the string to be used in the for loop later
-  strcpy(ph_computerdata, cmd_code.c_str()); // copying the contents of the string to char array
-                                             //if a command was sent to the EZO device.
-  for (i = 0; i <= code_length; i++)
-  {
-    ph_computerdata[i] = tolower(ph_computerdata[i]); //"Sleep" ≠ "sleep" //set all char to lower case, this is just so this exact sample code can recognize the "sleep" command.
-  }
-  i = 0; //reset i, we will need it later
-  if (ph_computerdata[0] == 'c' || ph_computerdata[0] == 'r')
-    time_ph = 815; //if a command has been sent to calibrate or take a reading we wait 815ms so that the circuit has time to take the reading.
-  else
-    time_ph = 250; //if any other command has been sent we wait only 250ms.
-
-  Wire.beginTransmission(pH_address); //call the circuit by its ID number.
-  Wire.write(ph_computerdata);        //transmit the command that was sent through the serial port.
-  Wire.endTransmission();             //end the I2C data transmission.
-
-  if (strcmp(ph_computerdata, "sleep") != 0)
-  { //if the command that has been sent is NOT the sleep command, wait the correct amount of time and request data.
-    //if it is the sleep command, we do nothing. Issuing a sleep command and then requesting data will wake the circuit.
-    delay(time_ph); //wait the correct amount of time for the circuit to complete its instruction.
-
-    Wire.requestFrom(pH_address, 20, 1); //call the circuit and request 20 bytes (this may be more than we need)
-    ph_response_code = Wire.read();      //the first byte is the response code, we read this separately.
-
-    switch (ph_response_code)
-    {                            //switch case based on what the response code is.
-    case 1:                      //decimal 1.
-      Serial.println("Success"); //means the command was successful.
-      break;                     //exits the switch case.
-
-    case 2:                     //decimal 2.
-      Serial.println("Failed"); //means the command has failed.
-      break;                    //exits the switch case.
-
-    case 254:                    //decimal 254.
-      Serial.println("Pending"); //means the command has not yet been finished calculating.
-      break;                     //exits the switch case.
-
-    case 255:                    //decimal 255.
-      Serial.println("No Data"); //means there is no further data to send.
-      break;                     //exits the switch case.
-    }
-
-    while (Wire.available())
-    {                           //are there bytes to receive.
-      ph_in_char = Wire.read(); //receive a byte.
-      ph_data[i] = ph_in_char;  //load this byte into our array.
-      i += 1;                   //incur the counter for the array element.
-      if (ph_in_char == 0)
-      {        //if we see that we have been sent a null command.
-        i = 0; //reset the counter i to 0.
-        break; //exit the while loop.
-      }
-    }
-
-    Serial.println(ph_data); //print the data.
-  }
-  ph_serial_event = false; //reset the serial event flag.
-  //Uncomment this section if you want to take the pH value and convert it into floating point number.
-  atlas_scientific_ph = atof(ph_data);                   //Converts the array to a float value which we will send via MQTT
-  String pH_string = String((float)atlas_scientific_ph); //Important here is that only the value of the measurement is stored in the string. Mycodo automatically converts string-values to float, therefore only the value is allowed to be stored here.
-}*/
-/*void ec_string_pars(char *ec_data_pars)
-{ //this function will break up the CSV string into its 4 individual parts. EC|TDS|SAL|SG.
-  //this is done using the C command “strtok”.
-
-  ec = strtok(ec_data_pars, ","); //let's pars the string at each comma.
-  tds = strtok(NULL, ",");        //let's pars the string at each comma.
-  sal = strtok(NULL, ",");        //let's pars the string at each comma.
-  sg = strtok(NULL, ",");         //let's pars the string at each comma.
-
-  //uncomment this section if you want to take the values and convert them into floating point number.
-
-  ec_float = atof(ec);
-  tds_float = atof(tds);
-  sal_float = atof(sal);
-  sg_float = atof(sg);
-
-  Serial.print("EC:");      //we now print each value we parsed separately.
-  Serial.println(ec_float); //this is the EC value.
-
-  Serial.print("TDS:");      //we now print each value we parsed separately.
-  Serial.println(tds_float); //this is the TDS value.
-
-  Serial.print("SAL:");      //we now print each value we parsed separately.
-  Serial.println(sal_float); //this is the salinity value.
-
-  Serial.print("SG:");      //we now print each value we parsed separately.
-  Serial.println(sg_float); //this is the specific gravity.
-  Serial.println();         //this just makes the output easier to read by adding an extra blank line
-}*/
-/*void measure_EC(String cmd_code)
-{
-  Serial.print("Copying String to char!");
-  //int ec_code_length = cmd_code.length();    //Gets the length of the string to be used in the for loop later
-  strcpy(ec_computerdata, cmd_code.c_str()); // copying the contents of the string to char array
-  Serial.print("All to lower case to char!");
-  for (int i = 0; i <= 20; i++)
-  { //set all char to lower case, this is just so this exact sample code can recognize the "sleep" command.
-    //ec_computerdata[i] = tolower(ec_computerdata[i]); //"Sleep" ≠ "sleep"
-  }
-  int i = 0; //reset i, we will need it later
-  if (ec_computerdata[0] == 'c' || ec_computerdata[0] == 'r')
-  {
-    Serial.print("Setting time to wait for reading/calbiration");
-    time_ec = 600; //if a command has been sent to calibrate or take a reading we wait 570ms so that the circuit has time to take the reading.
-  }
-  else
-    time_ec = 300; //if any other command has been sent we wait only 250ms.
-
-  Wire.beginTransmission(ec_address); //call the circuit by its ID number.
-  Wire.write(ec_computerdata);        //transmit the command that was sent through the serial port.
-  Wire.endTransmission();             //end the I2C data transmission.
-
-  if (strcmp(ec_computerdata, "sleep") != 0)
-  {                 //if the command that has been sent is NOT the sleep command, wait the correct amount of time and request data.
-                    //if it is the sleep command, we do nothing. Issuing a sleep command and then requesting data will wake the EC circuit.
-    delay(time_ec); //wait the correct amount of time for the circuit to complete its instruction.
-
-    Wire.requestFrom(ec_address, 32, 1); //call the circuit and request 32 bytes (this could be too small, but it is the max i2c buffer size for an Arduino)
-    ec_response_code = Wire.read();      //the first byte is the response code, we read this separately.
-    switch (ec_response_code)
-    {                            //switch case based on what the response code is.
-    case 1:                      //decimal 1.
-      Serial.println("Success"); //means the command was successful.
-      break;                     //exits the switch case.
-
-    case 2:                     //decimal 2.
-      Serial.println("Failed"); //means the command has failed.
-      break;                    //exits the switch case.
-
-    case 254:                    //decimal 254.
-      Serial.println("Pending"); //means the command has not yet been finished calculating.
-      break;                     //exits the switch case.
-
-    case 255:                    //decimal 255.
-      Serial.println("No Data"); //means there is no further data to send.
-      break;                     //exits the switch case.
-    }
-
-    while (Wire.available())
-    {                           //are there bytes to receive.
-      ec_in_char = Wire.read(); //receive a byte.
-      ec_data[i] = ec_in_char;  //load this byte into our array.
-      i += 1;                   //incur the counter for the array element.
-      if (ec_in_char == 0)
-      {        //if we see that we have been sent a null command.
-        i = 0; //reset the counter i to 0.
-        break; //exit the while loop.
-      }
-    }
-
-    Serial.println(ec_data); //print the data.
-    Serial.println();        //this just makes the output easier to read by adding an extra blank line
-  }
-
-  if (ec_computerdata[0] == 'r')
-  {
-    //ec_string_pars(ec_data); //uncomment this function if you would like to break up the comma separated string into its individual parts.
-  }
-}*/
