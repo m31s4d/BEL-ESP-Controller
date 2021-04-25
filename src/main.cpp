@@ -3,7 +3,7 @@
 Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in a research environment.
  **/
 #define HWTYPE 1    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
-#define TENTNO "B1" //Number of research tent either A1/A2/B1/B2/C1/C2
+#define TENTNO "B2" //Number of research tent either A1/A2/B1/B2/C1/C2
 //Test
 // Include the libraries we need
 #include "Arduino.h"
@@ -95,15 +95,15 @@ void read_PH();
 void parse_PH();
 
 //Initialize task to read/parse EC & pH
-Task taskReadEC(TASK_SECOND * 10, TASK_FOREVER, &read_EC);
-Task taskParseEC(TASK_SECOND * 35, TASK_FOREVER, &parse_EC);
+Task taskReadEC(TASK_SECOND * 11, TASK_FOREVER, &read_EC);
+Task taskParseEC(TASK_SECOND * 16, TASK_FOREVER, &parse_EC);
 Task taskReadPH(TASK_MINUTE, TASK_FOREVER, &read_PH);
-Task taskParsePH(TASK_SECOND * 65, TASK_FOREVER, &parse_PH);
+Task taskParsePH(TASK_SECOND * 66, TASK_FOREVER, &parse_PH);
 //MQTT: Include the following topics to send data value correctly for pH and EC
-String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ph/ezo_circuit/sensor1";   //Adds MQTT topic for the AtlasScientific pH probe
-String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/ezo_circuit/command"; //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
-String ec_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ec/ezo_circuit/sensor1";   //Adds MQTT topic for the AtlasScientific pH probe
-String ec_command_topic = "aeroponic/" + String(TENTNO) + "/ec/ezo_circuit/command"; //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ph/sensor1";   //Adds MQTT topic for the AtlasScientific pH probe
+String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/command"; //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+String ec_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ec/sensor1";   //Adds MQTT topic for the AtlasScientific pH probe
+String ec_command_topic = "aeroponic/" + String(TENTNO) + "/ec/command"; //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 #endif
 
 void startSensors()
