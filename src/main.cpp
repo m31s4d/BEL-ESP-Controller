@@ -4,7 +4,7 @@ Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Contro
  **/
 #define HWTYPE 1    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
 #define TENTNO "B1" //Number of research tent either A1/A2/B1/B2/C1/C2
-
+//Test
 // Include the libraries we need
 #include "Arduino.h"
 #include "Wire.h"         //Adds library for the I2C bus on D1 (SCL) and D2(SCD) (both can be changed on the ESP8266 to the deisred GPIO pins)
