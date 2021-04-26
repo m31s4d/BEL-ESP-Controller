@@ -4,20 +4,20 @@ Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Contro
  **/
 #define HWTYPE 1    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
 #define TENTNO "B2" //Number of research tent either A1/A2/B1/B2/C1/C2
-//Test
+
 // Include the libraries we need
 #include "Arduino.h"
 #include "Wire.h"         //Adds library for the I2C bus on D1 (SCL) and D2(SCD) (both can be changed on the ESP8266 to the deisred GPIO pins)
 #include "ESP8266WiFi.h"  // Enables the ESP8266 to connect to the local network (via WiFi)
 #include "PubSubClient.h" // Allows us to connect to, and publish to the MQTT broker
-#include <TaskScheduler.h>
+#include <TaskScheduler.h> //Adds multitasking by task scheduling
 
-String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId(), HEX); //String(random(0xffff), HEX); // Create a random client ID
-const char *clientID = nameBuffer.c_str();
+String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId(), HEX); //String(random(0xffff), HEX); // Create a random client ID to identify the controller in the network
+const char *clientID = nameBuffer.c_str();                       //Copies the string in the char array used by the mqtt library
 
 WiFiClient wifiClient;                                   // Initialise the WiFi and MQTT Client objects
 PubSubClient client("192.168.178.29", 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
-Scheduler tskscheduler;
+Scheduler tskscheduler;                                  //Initializes a TaskScheduler used to
 
 //Function stubs so TaskScheduler doesnt complain
 void startSensors();
@@ -27,7 +27,8 @@ Task taskStartSensors(TASK_SECOND, TASK_ONCE, &startSensors);
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
 const char *mqtt_server = "192.168.178.29";                                                       //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 String mqtt_connection_topic = "aeroponic/" + String(TENTNO) + "/connection/" + String(clientID); //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
-#if HWTYPE == 0
+
+#if HWTYPE == 0                                                                                   //
 //#include <SPI.h>
 #include "OneWire.h"           //Adds library needed to initialize and use the 1-Wire protocoll for DS18B20 sensors
 #include "DallasTemperature.h" //Adds the Dallas Temp library to use DS18B20 with the Wemos
@@ -65,16 +66,16 @@ String dallas_temp_0_string, dallas_temp_1_string, String dallas_temp_2_string; 
 int soil_moisture;
 unsigned long soilLoop = 0; //Needed for the millis() loop function
 
-String temp_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor1";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
-String humidity_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *pressure_bme280_topic_1 = "aeroponic/growtent2/pressure/bme280/sensor1";         //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *temp_bme280_topic_2 = "aeroponic/growtent2/temperature/bme280/sensor2";          //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *humidity_bme280_topic_2 = "aeroponic/growtent2/humidity/bme280/sensor2";         //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *pressure_bme280_topic_2 = "aeroponic/growtent2/pressure/bme280/sensor2";         //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *temp_ds18b20_topic_1 = "aeroponic/growtent2/temperature/d18b20/sensor1";         //Adds MQTT topic for the dallas sensor 1 in the root zone
-const char *temp_ds18b20_topic_2 = "aeroponic/growtent2/temperature/d18b20/sensor2";         //Adds MQTT topic for the dallas senssor 2
-const char *temp_ds18b20_topic_3 = "aeroponic/growtent2/temperature/d18b20/sensor3";         //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
-String soil_moisture_topic = "aeroponic/" + String(TENTNO) + "/soil_moisture/sensor1";       //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
+String temp_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor1";       //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String humidity_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor1";      //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *pressure_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *temp_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "temperature/bme280/sensor2";   //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *humidity_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *pressure_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+const char *temp_ds18b20_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor1"; //Adds MQTT topic for the dallas sensor 1 in the root zone
+const char *temp_ds18b20_topic_2 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor2"; //Adds MQTT topic for the dallas senssor 2
+const char *temp_ds18b20_topic_3 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
+String soil_moisture_topic = "aeroponic/" + String(TENTNO) + "/soil_moisture/sensor1";            //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 #else
 
 #include <Ezo_i2c.h>      //include the EZO I2C library from https://github.com/Atlas-Scientific/Ezo_I2c_lib
@@ -86,9 +87,6 @@ Ezo_board EC = Ezo_board(100, "EC"); //create an EC circuit object who's address
 
 U8X8_SSD1306_128X32_UNIVISION_SW_I2C u8x8(/* clock=A5*/ D1, /* data=A4*/ D2); //Defines the type of oled display used later on. In this case 128x32
 
-char *sensordata_buffer_ezo;
-uint8_t buffer_len_ezo;
-
 float ph_float; //float var used to hold float of pH value
 float ec_float; //float var used to hold the float value of the specific gravity.
 
@@ -99,12 +97,12 @@ void read_PH();
 void parse_PH();
 void print_oled();
 
-//Initialize task to read/parse EC & pH
+//Initialize task to read/parse EC & pH and print to OLED screen
 Task taskReadEC(TASK_SECOND * 31, TASK_FOREVER, &read_EC);
 Task taskParseEC(TASK_SECOND * 36, TASK_FOREVER, &parse_EC);
 Task taskReadPH(TASK_MINUTE, TASK_FOREVER, &read_PH);
 Task taskParsePH(TASK_SECOND * 66, TASK_FOREVER, &parse_PH);
-Task taskPrintOLED(TASK_MINUTE, TASK_FOREVER, &print_oled);
+Task taskPrintOLED(TASK_SECOND *5, TASK_FOREVER, &print_oled);
 
 //MQTT: Include the following topics to send data value correctly for pH and EC
 String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ph/sensor1";   //Adds MQTT topic for the AtlasScientific pH probe
@@ -112,40 +110,6 @@ String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/command"; //Adds 
 String ec_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ec/sensor1";   //Adds MQTT topic for the AtlasScientific pH probe
 String ec_command_topic = "aeroponic/" + String(TENTNO) + "/ec/command"; //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 #endif
-
-void startSensors()
-{
-#if HWTYPE == 0
-  dallassensors.begin();                       //Activates the DS18b20 sensors on the one wire
-  numDevices = dallassensors.getDeviceCount(); //Stores the DS18BB20 addresses on the ONEWIRE
-
-  if (!bme.begin(0x76))
-  { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
-    Serial.println(F("Could not find first BME280 sensor, check wiring!"));
-    //while (1)
-    //delay(10);
-  }
-  Serial.print("HWTYPE is 0, BME280 and DS18B20 sensors need to be started!");
-  if (taskStartSensors.isFirstIteration())
-  {
-    tskscheduler.addTask(taskBME280);
-    taskBME280.enable();
-    tskscheduler.addTask(taskDS18B20);
-    taskDS18B20.enable();
-  }
-#else
-  Serial.print("HWTYPE is 1, pH & EC sensors need to be started!");
-  if (taskStartSensors.isFirstIteration())
-  {
-    tskscheduler.addTask(taskReadEC);
-    taskReadEC.enable();
-    tskscheduler.addTask(taskReadPH);
-    //taskReadPH.enable();
-    tskscheduler.addTask(taskPrintOLED);
-    taskPrintOLED.enable();
-  }
-#endif
-}
 void connect_wifi(const char *var_ssid, const char *var_wifi_password)
 {
   //Defines the wifi connection settings of the second broker
@@ -246,6 +210,39 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length)
     }
     Serial.print(msg);
   }
+}
+void startSensors()
+{
+#if HWTYPE == 0
+  dallassensors.begin();                       //Activates the DS18b20 sensors on the one wire
+  numDevices = dallassensors.getDeviceCount(); //Stores the DS18BB20 addresses on the ONEWIRE
+
+  if (!bme.begin(0x76))
+  { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
+    Serial.println(F("Could not find first BME280 sensor, check wiring!"));
+    //while (1)
+    //delay(10);
+  }
+  Serial.print("HWTYPE is 0, BME280 and DS18B20 sensors need to be started!");
+  if (taskStartSensors.isFirstIteration())
+  {
+    tskscheduler.addTask(taskBME280);
+    taskBME280.enable();
+    tskscheduler.addTask(taskDS18B20);
+    taskDS18B20.enable();
+  }
+#else
+  Serial.print("HWTYPE is 1, pH & EC sensors need to be started!");
+  if (taskStartSensors.isFirstIteration())
+  {
+    tskscheduler.addTask(taskReadEC); //Adds and enables the task to read EC values from probe
+    taskReadEC.enable();
+    tskscheduler.addTask(taskReadPH); //Adds and enables the task to read pH values from probe
+    taskReadPH.enable();
+    tskscheduler.addTask(taskPrintOLED); //Adds and enables the task to print values to OLED
+    taskPrintOLED.enable();
+  }
+#endif
 }
 #if HWTYPE == 0
 void tca_bus_select(uint8_t i)
@@ -351,47 +348,47 @@ void measure_soil()
 #else
 void read_PH()
 {
-  if (taskReadPH.isFirstIteration())
-  { //Enables the parsing/sending of pH values
+  if (taskReadPH.isFirstIteration()) //During first iteration parsePH task needs to be enabled!
+  {                                  //Enables the parsing/sending of pH values
     tskscheduler.addTask(taskParsePH);
     taskParsePH.enable();
   }
-  PH.send_read_cmd();
+  PH.send_read_cmd(); //EZO circuit needs 1s to take a reading, sending a value in a different task than request solves problems.
 }
 void parse_PH()
 {
   if (PH.is_read_poll())
   {
-    PH.receive_read_cmd(); //get the response data and put it into the [Sensor].reading variable if successful
-    ph_float = PH.get_last_received_reading();
-    Serial.print("pH: ");
+    PH.receive_read_cmd();                     //get the response data and put it into the [Sensor].reading variable if successful
+    ph_float = PH.get_last_received_reading(); //Puts the last received ph value in the ph_float variable
+    Serial.print("pH: ");                      //Debugging
     Serial.println(ph_float);
     Serial.print("");
-    if (ph_float > 0)
+    if (ph_float > 0) //Only if we have proper vlaues (over 0) we transmit via mqtt
     {
       send_data_MQTT(String(ph_float), String(pH_ezo_topic_1));
     }
   }
 }
 void read_EC() //Reading and requesting data from EZO circuits need to be split up. Otherwise board is not ready and reading will be 0.
-{
-  //Ezo circuit requires pull-up resistors on SDA and SCL! Also only stable with 5V!
-  if (taskReadEC.isFirstIteration())
+{ //Values have a variation of +/- 50 µS/cm
+  //Ezo circuit requires pull-up resistors on SDA and SCL (not for Wemos D1 mini! Also only stable with 5V!
+  if (taskReadEC.isFirstIteration()) // During first iteration the parse EC task needs to be added and enabled!
   {
     tskscheduler.addTask(taskParseEC);
     taskParseEC.enable();
   }
-  EC.send_read_cmd();
+  EC.send_read_cmd(); //Sends the "R" command to EZO circuit
 }
 void parse_EC()
 {
   EC.receive_read_cmd(); //Requests the last reading saved in the EZO circuit
-  if (EC.is_read_poll())
+  if (EC.is_read_poll()) //Necessary to see if EZO is ready for reading out the value
   {
     //Serial.print("Error type: ");
     //Serial.println(EC.get_error());
     ec_float = EC.get_last_received_reading();
-    Serial.print("EC: ");
+    Serial.print("EC: "); //Debuuging
     Serial.println(ec_float);
     Serial.print("");
     if (ec_float > 0)
@@ -400,8 +397,9 @@ void parse_EC()
     }
   }
 }
-void print_oled(){
-  u8x8.setFont(u8x8_font_chroma48medium8_r);
+void print_oled()
+{
+  u8x8.setFont(u8x8_font_chroma48medium8_r); //Sets the font the oled uses. NECESSARY: Without is null pointer
   u8x8.drawString(0, 1, "EC:");
   u8x8.drawString(3, 1, String(ec_float).c_str());
   u8x8.drawString(0, 2, "pH:");
@@ -428,15 +426,15 @@ delay(1000);
 #endif
 void setup()
 {
-  Serial.begin(9600);                // Initialize the I2C bus (BH1750 library doesn't do this automatically)
-  Wire.begin();                      // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
-  client.setCallback(mqtt_callback); //Tells the pubsubclient which function to use in case of a callback
-  u8x8.begin(); //Initializes the u8x8 oled display
-  u8x8.setPowerSave(0); //Removes the power saving from the oled
+  Serial.begin(9600);                        // Initialize the I2C bus (BH1750 library doesn't do this automatically)
+  Wire.begin();                              // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
+  client.setCallback(mqtt_callback);         //Tells the pubsubclient which function to use in case of a callback
+  u8x8.begin();                              //Initializes the u8x8 oled display
+  u8x8.setPowerSave(0);                      //Removes the power saving from the oled
   u8x8.setFont(u8x8_font_chroma48medium8_r); //Specifies the used font on the display. Needed otherwise null pointer!
 
   tskscheduler.addTask(taskStartSensors); //Adds task to scheduler list
-  taskStartSensors.enable(); //Enables the start sensors task
+  taskStartSensors.enable();              //Enables the start sensors task
 }
 void loop()
 { //This function will continously be executed; everything which needs to be done recurringly is set here.
