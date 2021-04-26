@@ -84,6 +84,8 @@ String soil_moisture_topic = "aeroponic/" + String(TENTNO) + "/soil_moisture/sen
 Ezo_board PH = Ezo_board(99, "PH");  //create a PH circuit object, who's address is 99 and name is "PH"
 Ezo_board EC = Ezo_board(100, "EC"); //create an EC circuit object who's address is 100 and name is "EC"
 
+U8X8_SSD1306_128X32_UNIVISION_SW_I2C u8x8(/* clock=A5*/ D1, /* data=A4*/ D2); //Defines the type of oled display used later on. In this case 128x32
+
 char *sensordata_buffer_ezo;
 uint8_t buffer_len_ezo;
 
@@ -429,9 +431,9 @@ void setup()
   Serial.begin(9600);                // Initialize the I2C bus (BH1750 library doesn't do this automatically)
   Wire.begin();                      // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
   client.setCallback(mqtt_callback); //Tells the pubsubclient which function to use in case of a callback
-  u8x8.begin();
-  u8x8.setPowerSave(0);
-  u8x8.setFont(u8x8_font_chroma48medium8_r);
+  u8x8.begin(); //Initializes the u8x8 oled display
+  u8x8.setPowerSave(0); //Removes the power saving from the oled
+  u8x8.setFont(u8x8_font_chroma48medium8_r); //Specifies the used font on the display. Needed otherwise null pointer!
 
   tskscheduler.addTask(taskStartSensors); //Adds task to scheduler list
   taskStartSensors.enable(); //Enables the start sensors task
@@ -441,12 +443,12 @@ void loop()
   //unsigned long now = millis();
   if (WiFi.status() != WL_CONNECTED)
   {
-    //connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
-    connect_wifi("Hood Lan","Ja17081994Yp08091992");
+    connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
+    //connect_wifi("Hood Lan","Ja17081994Yp08091992");
   }
   if (!client.connected())
   {
-    //connect_MQTT(mqtt_server, 1883);
+    connect_MQTT(mqtt_server, 1883);
   }
   tskscheduler.execute();
   client.loop();
