@@ -16,7 +16,7 @@ String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId(), HEX); //String(random
 const char *clientID = nameBuffer.c_str();
 
 WiFiClient wifiClient;                                   // Initialise the WiFi and MQTT Client objects
-PubSubClient client("192.168.0.121", 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
+PubSubClient client("192.168.178.29", 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
 Scheduler tskscheduler;
 
 //Function stubs so TaskScheduler doesnt complain
@@ -25,7 +25,7 @@ Task taskStartSensors(TASK_SECOND, TASK_ONCE, &startSensors);
 
 // MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
-const char *mqtt_server = "192.168.0.121";                                                       //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server = "192.168.178.29";                                                       //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 String mqtt_connection_topic = "aeroponic/" + String(TENTNO) + "/connection/" + String(clientID); //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 #if HWTYPE == 0
 //#include <SPI.h>
@@ -79,6 +79,8 @@ String soil_moisture_topic = "aeroponic/" + String(TENTNO) + "/soil_moisture/sen
 
 #include <Ezo_i2c.h>      //include the EZO I2C library from https://github.com/Atlas-Scientific/Ezo_I2c_lib
 #include "Ezo_i2c_util.h" //brings in common print statements
+#include <U8g2lib.h>      //Needed for OLED Screen
+
 Ezo_board PH = Ezo_board(99, "PH");  //create a PH circuit object, who's address is 99 and name is "PH"
 Ezo_board EC = Ezo_board(100, "EC"); //create an EC circuit object who's address is 100 and name is "EC"
 
@@ -93,12 +95,15 @@ void read_EC();
 void parse_EC();
 void read_PH();
 void parse_PH();
+void print_oled();
 
 //Initialize task to read/parse EC & pH
-Task taskReadEC(TASK_SECOND * 11, TASK_FOREVER, &read_EC);
-Task taskParseEC(TASK_SECOND * 16, TASK_FOREVER, &parse_EC);
+Task taskReadEC(TASK_SECOND * 31, TASK_FOREVER, &read_EC);
+Task taskParseEC(TASK_SECOND * 36, TASK_FOREVER, &parse_EC);
 Task taskReadPH(TASK_MINUTE, TASK_FOREVER, &read_PH);
 Task taskParsePH(TASK_SECOND * 66, TASK_FOREVER, &parse_PH);
+Task taskPrintOLED(TASK_MINUTE, TASK_FOREVER, &print_oled);
+
 //MQTT: Include the following topics to send data value correctly for pH and EC
 String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ph/sensor1";   //Adds MQTT topic for the AtlasScientific pH probe
 String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/command"; //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
@@ -134,6 +139,8 @@ void startSensors()
     taskReadEC.enable();
     tskscheduler.addTask(taskReadPH);
     //taskReadPH.enable();
+    tskscheduler.addTask(taskPrintOLED);
+    taskPrintOLED.enable();
   }
 #endif
 }
@@ -391,6 +398,13 @@ void parse_EC()
     }
   }
 }
+void print_oled(){
+  u8x8.setFont(u8x8_font_chroma48medium8_r);
+  u8x8.drawString(0, 1, "EC:");
+  u8x8.drawString(3, 1, String(ec_float).c_str());
+  u8x8.drawString(0, 2, "pH:");
+  u8x8.drawString(3, 2, String(ph_float).c_str());
+}
 /*void measure_distance_ultrasonic(){
 int trigger=D7;                        // Der Trigger Pin
 int echo=D8;                                  // Der Echo Pin
@@ -415,13 +429,16 @@ void setup()
   Serial.begin(9600);                // Initialize the I2C bus (BH1750 library doesn't do this automatically)
   Wire.begin();                      // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
   client.setCallback(mqtt_callback); //Tells the pubsubclient which function to use in case of a callback
+  u8x8.begin();
+  u8x8.setPowerSave(0);
+  u8x8.setFont(u8x8_font_chroma48medium8_r);
 
   tskscheduler.addTask(taskStartSensors); //Adds task to scheduler list
   taskStartSensors.enable(); //Enables the start sensors task
 }
 void loop()
 { //This function will continously be executed; everything which needs to be done recurringly is set here.
-  unsigned long now = millis();
+  //unsigned long now = millis();
   if (WiFi.status() != WL_CONNECTED)
   {
     //connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
