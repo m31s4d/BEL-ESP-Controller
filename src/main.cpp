@@ -98,11 +98,11 @@ void parse_PH();
 void read_usonic();
 
 //Initialize task to read/parse EC & pH and print to OLED screen
-Task taskReadEC(TASK_MINUTE * 3, TASK_FOREVER, &read_EC);
-Task taskParseEC(TASK_MINUTE * 3, TASK_FOREVER, &parse_EC);
-Task taskReadPH(TASK_MINUTE * 3, TASK_FOREVER, &read_PH);
-Task taskParsePH(TASK_MINUTE * 3, TASK_FOREVER, &parse_PH);
-Task taskReadUSonic(TASK_MINUTE * 3, TASK_FOREVER, &read_usonic);
+Task taskReadEC(TASK_MINUTE , TASK_FOREVER, &read_EC);
+Task taskParseEC(TASK_SECOND *66 , TASK_FOREVER, &parse_EC);
+Task taskReadPH(TASK_SECOND *126 , TASK_FOREVER, &read_PH);
+Task taskParsePH(TASK_SECOND *132 , TASK_FOREVER, &parse_PH);
+Task taskReadUSonic(TASK_MINUTE *6 , TASK_FOREVER, &read_usonic);
 
 //MQTT: Include the following topics to send data value correctly for pH and EC
 String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ph/sensor1";       //Adds MQTT topic for the AtlasScientific pH probe
@@ -209,6 +209,7 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length)
       //Serial.print((char)payload[i]);
       msg[i] = (char)payload[i];
     }
+    EC.send_cmd(msg);
     Serial.print(msg);
   }
 }
