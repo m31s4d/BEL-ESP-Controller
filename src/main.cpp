@@ -7,9 +7,9 @@ Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Contro
 
 // Include the libraries we need
 #include "Arduino.h"
-#include "Wire.h"         //Adds library for the I2C bus on D1 (SCL) and D2(SCD) (both can be changed on the ESP8266 to the deisred GPIO pins)
-#include "ESP8266WiFi.h"  // Enables the ESP8266 to connect to the local network (via WiFi)
-#include "PubSubClient.h" // Allows us to connect to, and publish to the MQTT broker
+#include "Wire.h"          //Adds library for the I2C bus on D1 (SCL) and D2(SCD) (both can be changed on the ESP8266 to the deisred GPIO pins)
+#include "ESP8266WiFi.h"   // Enables the ESP8266 to connect to the local network (via WiFi)
+#include "PubSubClient.h"  // Allows us to connect to, and publish to the MQTT broker
 #include <TaskScheduler.h> //Adds multitasking by task scheduling
 
 String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId(), HEX); //String(random(0xffff), HEX); // Create a random client ID to identify the controller in the network
@@ -28,7 +28,7 @@ Task taskStartSensors(TASK_SECOND, TASK_ONCE, &startSensors);
 const char *mqtt_server = "192.168.178.29";                                                       //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 String mqtt_connection_topic = "aeroponic/" + String(TENTNO) + "/connection/" + String(clientID); //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 
-#if HWTYPE == 0                                                                                   //
+#if HWTYPE == 0 //
 //#include <SPI.h>
 #include "OneWire.h"           //Adds library needed to initialize and use the 1-Wire protocoll for DS18B20 sensors
 #include "DallasTemperature.h" //Adds the Dallas Temp library to use DS18B20 with the Wemos
@@ -41,8 +41,8 @@ void read_bme280();
 void read_ds18b20();
 void read_soilmoisture();
 
-Task taskBME280(TASK_SECOND * 5, TASK_FOREVER, &read_bme280);
-Task taskDS18B20(TASK_SECOND * 5, TASK_FOREVER, &read_ds18b20);
+Task taskBME280(TASK_SECOND * 30, TASK_FOREVER, &read_bme280);
+Task taskDS18B20(TASK_SECOND * 30, TASK_FOREVER, &read_ds18b20);
 Task taskSoilMoisture(TASK_MINUTE * 10, TASK_FOREVER, &read_soilmoisture);
 
 Adafruit_BME280 bme; // Create BME280 instance for the first sensor
@@ -95,20 +95,21 @@ void read_EC();
 void parse_EC();
 void read_PH();
 void parse_PH();
-void print_oled();
+void read_usonic();
 
 //Initialize task to read/parse EC & pH and print to OLED screen
-Task taskReadEC(TASK_SECOND * 31, TASK_FOREVER, &read_EC);
-Task taskParseEC(TASK_SECOND * 36, TASK_FOREVER, &parse_EC);
-Task taskReadPH(TASK_MINUTE, TASK_FOREVER, &read_PH);
-Task taskParsePH(TASK_SECOND * 66, TASK_FOREVER, &parse_PH);
-Task taskPrintOLED(TASK_SECOND *5, TASK_FOREVER, &print_oled);
+Task taskReadEC(TASK_MINUTE * 3, TASK_FOREVER, &read_EC);
+Task taskParseEC(TASK_MINUTE * 3, TASK_FOREVER, &parse_EC);
+Task taskReadPH(TASK_MINUTE * 3, TASK_FOREVER, &read_PH);
+Task taskParsePH(TASK_MINUTE * 3, TASK_FOREVER, &parse_PH);
+Task taskReadUSonic(TASK_MINUTE * 3, TASK_FOREVER, &read_usonic);
 
 //MQTT: Include the following topics to send data value correctly for pH and EC
-String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ph/sensor1";   //Adds MQTT topic for the AtlasScientific pH probe
-String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/command"; //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
-String ec_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ec/sensor1";   //Adds MQTT topic for the AtlasScientific pH probe
-String ec_command_topic = "aeroponic/" + String(TENTNO) + "/ec/command"; //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ph/sensor1";       //Adds MQTT topic for the AtlasScientific pH probe
+String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+String ec_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ec/sensor1";       //Adds MQTT topic for the AtlasScientific pH probe
+String ec_command_topic = "aeroponic/" + String(TENTNO) + "/ec/command";     //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+String fuellstand_topic = "aeroponic/" + String(TENTNO) + "/solution_level"; //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 #endif
 void connect_wifi(const char *var_ssid, const char *var_wifi_password)
 {
@@ -239,8 +240,6 @@ void startSensors()
     taskReadEC.enable();
     tskscheduler.addTask(taskReadPH); //Adds and enables the task to read pH values from probe
     taskReadPH.enable();
-    tskscheduler.addTask(taskPrintOLED); //Adds and enables the task to print values to OLED
-    taskPrintOLED.enable();
   }
 #endif
 }
@@ -364,14 +363,14 @@ void parse_PH()
     Serial.print("pH: ");                      //Debugging
     Serial.println(ph_float);
     Serial.print("");
-    if (ph_float > 0) //Only if we have proper vlaues (over 0) we transmit via mqtt
+    if (ph_float > 0) //Only if we have proper vlaues (over 0) we transmit data via mqtt
     {
       send_data_MQTT(String(ph_float), String(pH_ezo_topic_1));
     }
   }
 }
 void read_EC() //Reading and requesting data from EZO circuits need to be split up. Otherwise board is not ready and reading will be 0.
-{ //Values have a variation of +/- 50 µS/cm
+{              //Values have a variation of +/- 50 µS/cm
   //Ezo circuit requires pull-up resistors on SDA and SCL (not for Wemos D1 mini! Also only stable with 5V!
   if (taskReadEC.isFirstIteration()) // During first iteration the parse EC task needs to be added and enabled!
   {
@@ -397,32 +396,31 @@ void parse_EC()
     }
   }
 }
-void print_oled()
+
+void read_usonic()
 {
-  u8x8.setFont(u8x8_font_chroma48medium8_r); //Sets the font the oled uses. NECESSARY: Without is null pointer
-  u8x8.drawString(0, 1, "EC:");
-  u8x8.drawString(3, 1, String(ec_float).c_str());
-  u8x8.drawString(0, 2, "pH:");
-  u8x8.drawString(3, 2, String(ph_float).c_str());
+  //Durchmeser Fass: d = 40cm, Höhe h = 60cm, Fassungsvermögen = 60l distance_measured
+  int trigger = D7;            // Der Trigger Pin
+  int echo = D8;               // Der Echo Pin
+  float usonic_time = 0;       // Hier wird die Zeitdauer abgespeichert// die die Ultraschallwelle braucht// um zum Sensor zurückzukommen
+  float distance_measured = 0; // Hier wird die Entfernung vom  // Hindernis abgespeichert
+  pinMode(trigger, OUTPUT);
+  pinMode(echo, INPUT);
+  digitalWrite(trigger, LOW); // Den Trigger auf LOW setzen um// ein rauschfreies Signal// senden zu können
+  //delay(5);                                // 5 Millisekunden warten
+  digitalWrite(trigger, HIGH);                    // Den Trigger auf HIGH setzen um eine // Ultraschallwelle zu senden
+  delay(10);                                      // 10 Millisekunden warten
+  digitalWrite(trigger, LOW);                     // Trigger auf LOW setzen um das  // Senden abzuschließen
+  usonic_time = pulseIn(echo, HIGH);              // Die Zeit messen bis die // Ultraschallwelle zurückkommt
+  distance_measured = ((usonic_time / 2) / 29.1); // 29.1;           // Die Zeit in den Weg in Zentimeter umrechnen
+  Serial.print(distance_measured);                // Den Weg in Zentimeter ausgeben
+  Serial.println(" cm");                          //
+  int fuellstand = 69.11 - ((PI * (20 ^ 2) * (distance_measured)) / 1000);
+  if (fuellstand > 0)
+  {
+    send_data_MQTT(String(fuellstand), String(fuellstand_topic));
+  }
 }
-/*void measure_distance_ultrasonic(){
-int trigger=D7;                        // Der Trigger Pin
-int echo=D8;                                  // Der Echo Pin
-float usonic_time=0;                                // Hier wird die Zeitdauer abgespeichert// die die Ultraschallwelle braucht// um zum Sensor zurückzukommen
-float distance_measured=0;                           // Hier wird die Entfernung vom  // Hindernis abgespeichert 
-pinMode(trigger, OUTPUT);
-pinMode(echo, INPUT);
-digitalWrite(trigger, LOW);              // Den Trigger auf LOW setzen um// ein rauschfreies Signal// senden zu können
-delay(5);                                // 5 Millisekunden warten
-digitalWrite(trigger, HIGH);             // Den Trigger auf HIGH setzen um eine // Ultraschallwelle zu senden
-delay(10);                               // 10 Millisekunden warten
-digitalWrite(trigger, LOW);              // Trigger auf LOW setzen um das  // Senden abzuschließen
-usonic_time = pulseIn(echo, HIGH);             // Die Zeit messen bis die // Ultraschallwelle zurückkommt
-distance_measured = ((usonic_time/2)/29.1); // 29.1;           // Die Zeit in den Weg in Zentimeter umrechnen
-Serial.print(distance_measured);            // Den Weg in Zentimeter ausgeben
-Serial.println(" cm");               //
-delay(1000);      
-}*/
 #endif
 void setup()
 {
