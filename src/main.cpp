@@ -240,6 +240,8 @@ void startSensors()
     taskReadEC.enable();
     tskscheduler.addTask(taskReadPH); //Adds and enables the task to read pH values from probe
     taskReadPH.enable();
+    tskscheduler.addTask(taskReadUSonic);
+    taskReadUSonic.enable();
   }
 #endif
 }
@@ -415,10 +417,12 @@ void read_usonic()
   distance_measured = ((usonic_time / 2) / 29.1); // 29.1;           // Die Zeit in den Weg in Zentimeter umrechnen
   Serial.print(distance_measured);                // Den Weg in Zentimeter ausgeben
   Serial.println(" cm");                          //
-  int fuellstand = 69.11 - ((PI * (20 ^ 2) * (distance_measured)) / 1000);
-  if (fuellstand > 0)
+  float fuellstand = 69.11 - ((PI * (20 ^ 2) * (distance_measured)) / 1000);
+  if (fuellstand > 0 && fuellstand < 60)
   {
     send_data_MQTT(String(fuellstand), String(fuellstand_topic));
+  } else {
+    send_data_MQTT("-100", String(fuellstand_topic));
   }
 }
 #endif
