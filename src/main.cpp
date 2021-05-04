@@ -25,7 +25,8 @@ Task taskStartSensors(TASK_SECOND, TASK_ONCE, &startSensors);
 
 // MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
-const char *mqtt_server = "192.168.178.29";                                                       //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server = "192.168.178.52";                                                       //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server_2 = "192.168.178.50";                                                     //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 String mqtt_connection_topic = "aeroponic/" + String(TENTNO) + "/connection/" + String(clientID); //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 
 #if HWTYPE == 0 //
@@ -80,12 +81,12 @@ String soil_moisture_topic = "aeroponic/" + String(TENTNO) + "/soil_moisture/sen
 
 #include <Ezo_i2c.h>      //include the EZO I2C library from https://github.com/Atlas-Scientific/Ezo_I2c_lib
 #include "Ezo_i2c_util.h" //brings in common print statements
-#include <U8g2lib.h>      //Needed for OLED Screen
+//#include <U8g2lib.h>      //Needed for OLED Screen
 
 Ezo_board PH = Ezo_board(99, "PH");  //create a PH circuit object, who's address is 99 and name is "PH"
 Ezo_board EC = Ezo_board(100, "EC"); //create an EC circuit object who's address is 100 and name is "EC"
 
-U8X8_SSD1306_128X32_UNIVISION_SW_I2C u8x8(/* clock=A5*/ D1, /* data=A4*/ D2); //Defines the type of oled display used later on. In this case 128x32
+//U8X8_SSD1306_128X32_UNIVISION_SW_I2C u8x8(/* clock=A5*/ D1, /* data=A4*/ D2); //Defines the type of oled display used later on. In this case 128x32
 
 float ph_float; //float var used to hold float of pH value
 float ec_float; //float var used to hold the float value of the specific gravity.
@@ -98,11 +99,11 @@ void parse_PH();
 void read_usonic();
 
 //Initialize task to read/parse EC & pH and print to OLED screen
-Task taskReadEC(TASK_MINUTE , TASK_FOREVER, &read_EC);
-Task taskParseEC(TASK_SECOND *66 , TASK_FOREVER, &parse_EC);
-Task taskReadPH(TASK_SECOND *126 , TASK_FOREVER, &read_PH);
-Task taskParsePH(TASK_SECOND *132 , TASK_FOREVER, &parse_PH);
-Task taskReadUSonic(TASK_MINUTE *6 , TASK_FOREVER, &read_usonic);
+Task taskReadEC(TASK_MINUTE, TASK_FOREVER, &read_EC);
+Task taskParseEC(TASK_SECOND * 66, TASK_FOREVER, &parse_EC);
+Task taskReadPH(TASK_SECOND * 126, TASK_FOREVER, &read_PH);
+Task taskParsePH(TASK_SECOND * 132, TASK_FOREVER, &parse_PH);
+Task taskReadUSonic(TASK_MINUTE * 6, TASK_FOREVER, &read_usonic);
 
 //MQTT: Include the following topics to send data value correctly for pH and EC
 String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ph/sensor1";       //Adds MQTT topic for the AtlasScientific pH probe
@@ -150,7 +151,8 @@ void connect_MQTT(const char *var_mqtt_client, int port_num)
   // If the connection is failing, make sure you are using the correct MQTT Username and Password (Setup Earlier in the Instructable)
   if (client.connect(clientID))
   {
-    Serial.println("Connected to MQTT Broker!");
+    Serial.println(" Connected to MQTT Broker: ");
+    Serial.println(var_mqtt_client);
     //MQTT Topics to subscribe to for functioning. Structure as follows: project/location/type/number
     //Following are test topics
     //delay(100);
@@ -162,9 +164,10 @@ void connect_MQTT(const char *var_mqtt_client, int port_num)
     Serial.println("Connection to MQTT Broker failed...");
   }
 }
-void send_data_MQTT(String value, String topic)
+void send_data_MQTT(String value, String topic, const char *var_mqtt_client)
 {
   //strcpy(mqtt_topic, topic.c_str()); // copying the contents of the string to char array
+  connect_MQTT(var_mqtt_client, 1883);
   if (WiFi.status() == WL_CONNECTED)
   {
     if (client.publish(topic.c_str(), String(value).c_str())) // PUBLISH to the MQTT Broker (topic was defined at the beginning)
@@ -221,7 +224,7 @@ void startSensors()
 
   if (!bme.begin(0x76))
   { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
-    Serial.println(F("Could not find first BME280 sensor, check wiring!"));
+    Serial.println(F("Could not find BME280 sensor, check wiring!"));
     //while (1)
     //delay(10);
   }
@@ -368,7 +371,8 @@ void parse_PH()
     Serial.print("");
     if (ph_float > 0) //Only if we have proper vlaues (over 0) we transmit data via mqtt
     {
-      send_data_MQTT(String(ph_float), String(pH_ezo_topic_1));
+      send_data_MQTT(String(ph_float), String(pH_ezo_topic_1), mqtt_server);
+      send_data_MQTT(String(ph_float), String(pH_ezo_topic_1), mqtt_server_2);
     }
   }
 }
@@ -395,11 +399,11 @@ void parse_EC()
     Serial.print("");
     if (ec_float > 0)
     {
-      send_data_MQTT(String(ec_float), String(ec_ezo_topic_1));
+      send_data_MQTT(String(ec_float), String(ec_ezo_topic_1), mqtt_server);
+      send_data_MQTT(String(ec_float), String(ec_ezo_topic_1), mqtt_server_2);
     }
   }
 }
-
 void read_usonic()
 {
   //Durchmeser Fass: d = 40cm, Höhe h = 60cm, Fassungsvermögen = 60l distance_measured
@@ -421,21 +425,21 @@ void read_usonic()
   float fuellstand = 69.11 - ((PI * (20 ^ 2) * (distance_measured)) / 1000);
   if (fuellstand > 0 && fuellstand < 60)
   {
-    send_data_MQTT(String(fuellstand), String(fuellstand_topic));
-  } else {
-    send_data_MQTT("-100", String(fuellstand_topic));
+    send_data_MQTT(String(fuellstand), String(fuellstand_topic), mqtt_server);
+    send_data_MQTT(String(fuellstand), String(fuellstand_topic), mqtt_server_2);
+  }
+  else
+  {
+    send_data_MQTT("-100", String(fuellstand_topic), mqtt_server);
+    send_data_MQTT("-100", String(fuellstand_topic), mqtt_server_2);
   }
 }
 #endif
 void setup()
 {
-  Serial.begin(9600);                        // Initialize the I2C bus (BH1750 library doesn't do this automatically)
-  Wire.begin();                              // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
-  client.setCallback(mqtt_callback);         //Tells the pubsubclient which function to use in case of a callback
-  u8x8.begin();                              //Initializes the u8x8 oled display
-  u8x8.setPowerSave(0);                      //Removes the power saving from the oled
-  u8x8.setFont(u8x8_font_chroma48medium8_r); //Specifies the used font on the display. Needed otherwise null pointer!
-
+  Serial.begin(9600);                     // Initialize the I2C bus (BH1750 library doesn't do this automatically)
+  Wire.begin();                           // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
+  client.setCallback(mqtt_callback);      //Tells the pubsubclient which function to use in case of a callback
   tskscheduler.addTask(taskStartSensors); //Adds task to scheduler list
   taskStartSensors.enable();              //Enables the start sensors task
 }
@@ -447,10 +451,10 @@ void loop()
     connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
     //connect_wifi("Hood Lan","Ja17081994Yp08091992");
   }
-  if (!client.connected())
+  /*if (!client.connected())
   {
     connect_MQTT(mqtt_server, 1883);
-  }
+  }*/
   tskscheduler.execute();
   client.loop();
 }
