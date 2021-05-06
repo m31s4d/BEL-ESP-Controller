@@ -16,7 +16,7 @@ String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId(), HEX); //String(random
 const char *clientID = nameBuffer.c_str();                       //Copies the string in the char array used by the mqtt library
 
 WiFiClient wifiClient;                                   // Initialise the WiFi and MQTT Client objects
-PubSubClient client("192.168.178.29", 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
+PubSubClient client("192.168.178.50", 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
 Scheduler tskscheduler;                                  //Initializes a TaskScheduler used to
 
 //Function stubs so TaskScheduler doesnt complain
@@ -25,8 +25,8 @@ Task taskStartSensors(TASK_SECOND, TASK_ONCE, &startSensors);
 
 // MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
-const char *mqtt_server = "192.168.178.52";                                                       //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-const char *mqtt_server_2 = "192.168.178.50";                                                     //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server = "192.168.178.50";                                                       //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server_2 = "192.168.178.52";                                                     //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 String mqtt_connection_topic = "aeroponic/" + String(TENTNO) + "/connection/" + String(clientID); //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 
 #if HWTYPE == 0 //
@@ -153,21 +153,16 @@ void connect_MQTT(const char *var_mqtt_client, int port_num)
   {
     Serial.println(" Connected to MQTT Broker: ");
     Serial.println(var_mqtt_client);
-    //MQTT Topics to subscribe to for functioning. Structure as follows: project/location/type/number
-    //Following are test topics
-    //delay(100);
-    //client.publish(mqtt_connection_topic_1, "on");
-    //client.subscribe("aeroponic/B1/EC/command");
   }
   else
   {
     Serial.println("Connection to MQTT Broker failed...");
   }
 }
-void send_data_MQTT(String value, String topic, const char *var_mqtt_client)
+void send_data_MQTT(String value, String topic, const char *var_send_mqtt_client)
 {
   //strcpy(mqtt_topic, topic.c_str()); // copying the contents of the string to char array
-  connect_MQTT(var_mqtt_client, 1883);
+  connect_MQTT(var_send_mqtt_client, 1883);
   if (WiFi.status() == WL_CONNECTED)
   {
     if (client.publish(topic.c_str(), String(value).c_str())) // PUBLISH to the MQTT Broker (topic was defined at the beginning)
@@ -186,6 +181,7 @@ void send_data_MQTT(String value, String topic, const char *var_mqtt_client)
       delay(10); // This delay ensures that client.publish doesn't clash with the client.connect call
       client.publish(topic.c_str(), String(value).c_str());
     }
+    client.disconnect(); //Needed to get a clean connection to next mqtt_server
   }
 }
 void mqtt_callback(char *topic, byte *payload, unsigned int length)
