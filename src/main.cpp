@@ -410,7 +410,7 @@ void read_usonic()
   pinMode(trigger, OUTPUT);
   pinMode(echo, INPUT);
   digitalWrite(trigger, LOW); // Den Trigger auf LOW setzen um// ein rauschfreies Signal// senden zu können
-  //delay(5);                                // 5 Millisekunden warten
+  delay(5);                                // 5 Millisekunden warten
   digitalWrite(trigger, HIGH);                    // Den Trigger auf HIGH setzen um eine // Ultraschallwelle zu senden
   delay(10);                                      // 10 Millisekunden warten
   digitalWrite(trigger, LOW);                     // Trigger auf LOW setzen um das  // Senden abzuschließen
@@ -418,8 +418,12 @@ void read_usonic()
   distance_measured = ((usonic_time / 2) / 29.1); // 29.1;           // Die Zeit in den Weg in Zentimeter umrechnen
   Serial.print(distance_measured);                // Den Weg in Zentimeter ausgeben
   Serial.println(" cm");                          //
-  float fuellstand = 69.11 - ((PI * (20 ^ 2) * (distance_measured)) / 1000);
-  if (fuellstand > 0 && fuellstand < 60)
+  float fuellstand = (((PI * (400.0))));
+  fuellstand = fuellstand * (distance_measured);
+  fuellstand = fuellstand / 1000;
+  Serial.print(fuellstand);                // Den Weg in Zentimeter ausgeben
+  Serial.println(" l");                          //
+  if (fuellstand < 60)
   {
     send_data_MQTT(String(fuellstand), String(fuellstand_topic), mqtt_server);
     send_data_MQTT(String(fuellstand), String(fuellstand_topic), mqtt_server_2);
