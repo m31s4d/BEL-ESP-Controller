@@ -400,7 +400,7 @@ void parse_EC()
     //Serial.print("Error type: ");
     //Serial.println(EC.get_error());
     ec_float = EC.get_last_received_reading();
-    Serial.print("EC: "); //Debuuging
+    Serial.print("EC: "); //Debugging
     Serial.println(ec_float);
     Serial.print("");
     if (ec_float > 0)
