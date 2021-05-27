@@ -3,7 +3,7 @@
 Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in a research environment.
  **/
 #define HWTYPE 1    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
-#define TENTNO "B2" //Number of research tent either A1/A2/B1/B2/C1/C2
+#define TENTNO "B1" //Number of research tent either A1/A2/B1/B2/C1/C2
 
 // Include the libraries we need
 #include "Arduino.h"
@@ -96,10 +96,10 @@ void read_ds18b20();
 void read_usonic();
 
 //Initialize task to read/parse EC & pH and print to OLED screen
-Task taskReadEC(TASK_MINUTE, TASK_FOREVER, &read_EC);
-Task taskParseEC(TASK_SECOND * 65, TASK_FOREVER, &parse_EC);
-Task taskReadPH(TASK_SECOND * 66, TASK_FOREVER, &read_PH);
-Task taskParsePH(TASK_SECOND * 75, TASK_FOREVER, &parse_PH);
+Task taskReadEC(TASK_MINUTE * 2, TASK_FOREVER, &read_EC);
+Task taskParseEC(TASK_SECOND * 121, TASK_FOREVER, &parse_EC);
+Task taskReadPH(TASK_SECOND * 130, TASK_FOREVER, &read_PH);
+Task taskParsePH(TASK_SECOND * 135, TASK_FOREVER, &parse_PH);
 Task taskReadUSonic(TASK_MINUTE * 5, TASK_FOREVER, &read_usonic);
 
 //MQTT: Include the following topics to send data value correctly for pH and EC
