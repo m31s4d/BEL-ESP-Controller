@@ -26,10 +26,10 @@ void startSensors();
 void read_ds18b20();
 
 Task taskStartSensors(TASK_SECOND, TASK_ONCE, &startSensors);
-Task taskDS18B20(TASK_SECOND * 120, TASK_FOREVER, &read_ds18b20);
+Task taskDS18B20(TASK_SECOND * 60, TASK_FOREVER, &read_ds18b20);
 
 //Initialization of the OneWire Bus und the temp sensor
-const int oneWireBus = D5;                 // GPIO where the DS18B20 is connected to D3
+#define oneWireBus D5                 // GPIO where the DS18B20 is connected to D3
 int numDevices;                            // Number of temperature devices found (will be used to get and publish all readings)
 OneWire oneWire(oneWireBus);               // Setup a oneWire instance to communicate with any OneWire devices
 DallasTemperature dallassensors(&oneWire); // Pass our oneWire reference to Dallas Temperature sensor
@@ -101,6 +101,7 @@ Task taskParseEC(TASK_SECOND * 121, TASK_FOREVER, &parse_EC);
 Task taskReadPH(TASK_SECOND * 130, TASK_FOREVER, &read_PH);
 Task taskParsePH(TASK_SECOND * 135, TASK_FOREVER, &parse_PH);
 Task taskReadUSonic(TASK_MINUTE * 5, TASK_FOREVER, &read_usonic);
+//Task taskReadDSB(TASK_MINUTE, TASK_FOREVER, &read_ds18b20);
 
 //MQTT: Include the following topics to send data value correctly for pH and EC
 String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ph/sensor1";         //Adds MQTT topic for the AtlasScientific pH probe
@@ -304,8 +305,8 @@ void read_ds18b20()
   send_data_MQTT(String(dallas_temp_1), temp_ds18b20_topic_2, mqtt_server_2);
   send_data_MQTT(String(dallas_temp_2), temp_ds18b20_topic_3, mqtt_server_2);
 #elif HWTYPE == 1
-  send_data_MQTT(String(dallas_temp_0), solution_temp_topic, mqtt_server);
-  send_data_MQTT(String(dallas_temp_0), solution_temp_topic, mqtt_server_2);
+  send_data_MQTT(String(dallas_temp_1), solution_temp_topic, mqtt_server);
+  send_data_MQTT(String(dallas_temp_1), solution_temp_topic, mqtt_server_2);
 #endif
 }
 #if HWTYPE == 0
