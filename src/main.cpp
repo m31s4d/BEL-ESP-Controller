@@ -3,7 +3,7 @@
 Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in a research environment.
  **/
 #define HWTYPE 1    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
-#define TENTNO "B1" //Number of research tent either A1/A2/B1/B2/C1/C2
+#define TENTNO "B2" //Number of research tent either A1/A2/B1/B2/C1/C2
 
 // Include the libraries we need
 #include "Arduino.h"
@@ -29,9 +29,9 @@ Task taskStartSensors(TASK_SECOND, TASK_ONCE, &startSensors);
 Task taskDS18B20(TASK_SECOND * 60, TASK_FOREVER, &read_ds18b20);
 
 //Initialization of the OneWire Bus und the temp sensor
-#define oneWireBus D5                 // GPIO where the DS18B20 is connected to D5 --> Important, D5 needs to be pulled-up to be able to read DS18B20
+// GPIO where the DS18B20 is connected to D5 --> Important, D5 needs to be pulled-up to be able to read DS18B20
 int numDevices;                            // Number of temperature devices found (will be used to get and publish all readings)
-OneWire oneWire(oneWireBus);               // Setup a oneWire instance to communicate with any OneWire devices
+OneWire oneWire(D5);               // Setup a oneWire instance to communicate with any OneWire devices
 DallasTemperature dallassensors(&oneWire); // Pass our oneWire reference to Dallas Temperature sensor
 DeviceAddress tempDeviceAddress;           // We'll use this variable to store a found device address for the DS18B20
 
@@ -252,7 +252,6 @@ void measure_ds18b20()
   // Loop through each device, print out temperature data
   for (int i = 0; i < numDevices; i++)
   {
-
     // Search the wire for address
     if (dallassensors.getAddress(tempDeviceAddress, i))
     {
@@ -305,8 +304,8 @@ void read_ds18b20()
   send_data_MQTT(String(dallas_temp_1), temp_ds18b20_topic_2, mqtt_server_2);
   send_data_MQTT(String(dallas_temp_2), temp_ds18b20_topic_3, mqtt_server_2);
 #elif HWTYPE == 1
-  send_data_MQTT(String(dallas_temp_1), solution_temp_topic, mqtt_server);
-  send_data_MQTT(String(dallas_temp_1), solution_temp_topic, mqtt_server_2);
+  send_data_MQTT(String(dallas_temp_0), solution_temp_topic, mqtt_server);
+  send_data_MQTT(String(dallas_temp_0), solution_temp_topic, mqtt_server_2);
 #endif
 }
 #if HWTYPE == 0
