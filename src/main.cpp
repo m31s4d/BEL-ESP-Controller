@@ -226,6 +226,7 @@ void startSensors()
   numDevices = dallassensors.getDeviceCount(); //Stores the DS18BB20 addresses on the ONEWIRE
   tskscheduler.addTask(taskDS18B20);
   taskDS18B20.enable();
+
 #if HWTYPE == 0
   if (!bme.begin(0x76))
   { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
@@ -247,7 +248,7 @@ void startSensors()
     taskReadEC.enable();
     tskscheduler.addTask(taskReadPH); //Adds and enables the task to read pH values from probe
     taskReadPH.enable();
-    tskscheduler.addTask(taskReadUSonic);
+    tskscheduler.addTask(taskReadUSonic); //Adds and enablse reading of HC-04 ultrasonic sensor
     taskReadUSonic.enable();
   }
 #endif
@@ -306,6 +307,7 @@ void read_ds18b20()
   send_data_MQTT(String(dallas_temp_0), temp_ds18b20_topic_1, mqtt_server);
   send_data_MQTT(String(dallas_temp_1), temp_ds18b20_topic_2, mqtt_server);
   send_data_MQTT(String(dallas_temp_2), temp_ds18b20_topic_3, mqtt_server);
+
   send_data_MQTT(String(dallas_temp_0), temp_ds18b20_topic_1, mqtt_server_2);
   send_data_MQTT(String(dallas_temp_1), temp_ds18b20_topic_2, mqtt_server_2);
   send_data_MQTT(String(dallas_temp_2), temp_ds18b20_topic_3, mqtt_server_2);
@@ -345,28 +347,18 @@ void read_bme280()
   send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_1),mqtt_server_2);
   send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_1),mqtt_server_2);
   send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_1),mqtt_server_2);
+  
   measure_bme280(7);
   send_data_MQTT(String(bme280_temp), temp_bme280_topic_2,mqtt_server);
   send_data_MQTT(String(bme280_humidity), humidity_bme280_topic_2,mqtt_server);
   send_data_MQTT(String(bme280_pressure), pressure_bme280_topic_2,mqtt_server);
+
+  send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_2),mqtt_server_2);
+  send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_2),mqtt_server_2);
+  send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_2),mqtt_server_2);
+  
   
 }
-/*
-void measure_soil()
-{
-  //# the approximate moisture levels for the sensor reading
-  //# 0 to 300 dry soil
-  //# 300 to 700 humid soil
-  //# 700 to 950 in water
-  pinMode(soilPin, OUTPUT);
-  digitalWrite(soilPin, HIGH);
-  double sensorValue = analogRead(sensorPin); // read the analog in value:
-  sensorValue = map(sensorValue, 1024, 0, 0, 100);
-  Serial.print("Moisture : ");
-  Serial.println(sensorValue); //Prints out the value of the soil sensor to check if it is wired correctly
-  soil_moisture = sensorValue;
-  Serial.println("%");
-}*/
 #else
 void read_PH()
 {
@@ -483,3 +475,19 @@ void loop()
   tskscheduler.execute();
   client.loop();
 }
+/*
+void measure_soil()
+{
+  //# the approximate moisture levels for the sensor reading
+  //# 0 to 300 dry soil
+  //# 300 to 700 humid soil
+  //# 700 to 950 in water
+  pinMode(soilPin, OUTPUT);
+  digitalWrite(soilPin, HIGH);
+  double sensorValue = analogRead(sensorPin); // read the analog in value:
+  sensorValue = map(sensorValue, 1024, 0, 0, 100);
+  Serial.print("Moisture : ");
+  Serial.println(sensorValue); //Prints out the value of the soil sensor to check if it is wired correctly
+  soil_moisture = sensorValue;
+  Serial.println("%");
+}*/
