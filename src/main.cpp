@@ -2,7 +2,7 @@
  This code was written/hacked together by Swen Schreiter and is the basis for the multifunctional environmental sensing device called S.E.E.D (Small Electronic Environmental Device).
 Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in a research environment.
  **/
-#define HWTYPE 1    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
+#define HWTYPE 0    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
 #define TENTNO "B2" //Number of research tent either A1/A2/B1/B2/C1/C2
 
 // Include the libraries we need
@@ -31,7 +31,7 @@ Task taskDS18B20(TASK_SECOND * 60, TASK_FOREVER, &read_ds18b20);
 //Initialization of the OneWire Bus und the temp sensor
 // GPIO where the DS18B20 is connected to D5 --> Important, D5 needs to be pulled-up to be able to read DS18B20
 int numDevices;                            // Number of temperature devices found (will be used to get and publish all readings)
-OneWire oneWire(D5);               // Setup a oneWire instance to communicate with any OneWire devices
+OneWire oneWire(D3);               // Setup a oneWire instance to communicate with any OneWire devices for A1/A2/B1 == D5; B2 == D3
 DallasTemperature dallassensors(&oneWire); // Pass our oneWire reference to Dallas Temperature sensor
 DeviceAddress tempDeviceAddress;           // We'll use this variable to store a found device address for the DS18B20
 
@@ -44,6 +44,8 @@ String dallas_temp_0_string, dallas_temp_1_string, dallas_temp_2_string; //Varia
 const char *mqtt_server = "192.168.178.50";                                                       //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 const char *mqtt_server_2 = "192.168.178.52";                                                     //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 String mqtt_connection_topic = "aeroponic/" + String(TENTNO) + "/connection/" + String(clientID); //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
+String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/command";       //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+String ec_command_topic = "aeroponic/" + String(TENTNO) + "/ec/command";       //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 String temp_ds18b20_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor1";      //Adds MQTT topic for the dallas sensor 1 in the root zone
 String temp_ds18b20_topic_2 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor2";      //Adds MQTT topic for the dallas senssor 2
 String temp_ds18b20_topic_3 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor3";      //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
@@ -57,10 +59,10 @@ String temp_ds18b20_topic_3 = "aeroponic/" + String(TENTNO) + "/temperature/d18b
 //Functions stubs so VSCode doesn't complain
 void read_bme280();
 void read_ds18b20();
-void read_soilmoisture();
+//void read_soilmoisture();
 
 Task taskBME280(TASK_SECOND * 30, TASK_FOREVER, &read_bme280);
-Task taskSoilMoisture(TASK_MINUTE * 10, TASK_FOREVER, &read_soilmoisture);
+////Task taskSoilMoisture(TASK_MINUTE * 10, TASK_FOREVER, &read_soilmoisture);
 
 Adafruit_BME280 bme; // Create BME280 instance for the first sensor
 
@@ -69,10 +71,10 @@ float bme280_temp, bme280_humidity, bme280_pressure, bme280_altitude; //Sets the
 
 String temp_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor1";       //Adds MQTT topic for the sensor readings of the aero-grow-tables
 String humidity_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor1";      //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *pressure_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *temp_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "temperature/bme280/sensor2";   //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *humidity_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-const char *pressure_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String pressure_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String temp_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor2";   //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String humidity_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String pressure_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 #else
 
 #include <Ezo_i2c.h>      //include the EZO I2C library from https://github.com/Atlas-Scientific/Ezo_I2c_lib
@@ -105,9 +107,9 @@ Task taskReadUSonic(TASK_MINUTE * 5, TASK_FOREVER, &read_usonic);
 
 //MQTT: Include the following topics to send data value correctly for pH and EC
 String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ph/sensor1";         //Adds MQTT topic for the AtlasScientific pH probe
-String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/command";       //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+
 String ec_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ec/sensor1";         //Adds MQTT topic for the AtlasScientific pH probe
-String ec_command_topic = "aeroponic/" + String(TENTNO) + "/ec/command";       //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+
 String fuellstand_topic = "aeroponic/" + String(TENTNO) + "/solution_level";   //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 String solution_temp_topic = "aeroponic/" + String(TENTNO) + "/solution_temp"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
 
@@ -199,7 +201,9 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length)
       Serial.print((char)payload[i]);
       msg[i] = (char)payload[i];
     }
+    #if HWTYPE == 1
     PH.send_cmd(msg);
+    #endif
   }
   if (tmp_topic == ec_command_topic)
   {
@@ -209,8 +213,10 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length)
       //Serial.print((char)payload[i]);
       msg[i] = (char)payload[i];
     }
+    #if HWTYPE == 1
     EC.send_cmd(msg);
     Serial.print(msg);
+    #endif
   }
 }
 void startSensors()
@@ -332,15 +338,20 @@ void measure_bme280(int tca_bus)
 void read_bme280()
 {
   measure_bme280(0);
-  send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_1));
-  send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_1));
-  send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_1));
+  send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_1),mqtt_server);
+  send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_1),mqtt_server);
+  send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_1),mqtt_server);
+  
+  send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_1),mqtt_server_2);
+  send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_1),mqtt_server_2);
+  send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_1),mqtt_server_2);
   measure_bme280(7);
-  send_data_MQTT(String(bme280_temp), temp_bme280_topic_2);
-  send_data_MQTT(String(bme280_humidity), humidity_bme280_topic_2);
-  send_data_MQTT(String(bme280_pressure), pressure_bme280_topic_2);
+  send_data_MQTT(String(bme280_temp), temp_bme280_topic_2,mqtt_server);
+  send_data_MQTT(String(bme280_humidity), humidity_bme280_topic_2,mqtt_server);
+  send_data_MQTT(String(bme280_pressure), pressure_bme280_topic_2,mqtt_server);
+  
 }
-
+/*
 void measure_soil()
 {
   //# the approximate moisture levels for the sensor reading
@@ -355,7 +366,7 @@ void measure_soil()
   Serial.println(sensorValue); //Prints out the value of the soil sensor to check if it is wired correctly
   soil_moisture = sensorValue;
   Serial.println("%");
-}
+}*/
 #else
 void read_PH()
 {
