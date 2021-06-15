@@ -2,7 +2,7 @@
  This code was written/hacked together by Swen Schreiter and is the basis for the multifunctional environmental sensing device called S.E.E.D (Small Electronic Environmental Device).
 Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in a research environment.
  **/
-#define HWTYPE 0    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
+#define HWTYPE 1    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
 #define TENTNO "B2" //Number of research tent either A1/A2/B1/B2/C1/C2
 
 // Include the libraries we need
@@ -19,6 +19,7 @@ const char *clientID = nameBuffer.c_str();                       //Copies the st
 
 WiFiClient wifiClient;                                   // Initialise the WiFi and MQTT Client objects
 PubSubClient client("192.168.178.50", 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
+PubSubClient cmdclient("192.168.178.50", 1883, wifiClient);
 Scheduler tskscheduler;                                  //Initializes a TaskScheduler used to
 
 //Function stubs so TaskScheduler doesnt complain
@@ -46,6 +47,7 @@ const char *mqtt_server_2 = "192.168.178.52";                                   
 String mqtt_connection_topic = "aeroponic/" + String(TENTNO) + "/connection/" + String(clientID); //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/command";       //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 String ec_command_topic = "aeroponic/" + String(TENTNO) + "/ec/command";       //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+
 String temp_ds18b20_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor1";      //Adds MQTT topic for the dallas sensor 1 in the root zone
 String temp_ds18b20_topic_2 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor2";      //Adds MQTT topic for the dallas senssor 2
 String temp_ds18b20_topic_3 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor3";      //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
@@ -195,27 +197,28 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length)
   char msg[length];
   if (tmp_topic == pH_command_topic)
   {
-    Serial.print("Message:");
-    for (int i = 0; i < length; i++)
-    {
-      Serial.print((char)payload[i]);
-      msg[i] = (char)payload[i];
-    }
-    #if HWTYPE == 1
-    PH.send_cmd(msg);
-    #endif
-  }
-  if (tmp_topic == ec_command_topic)
-  {
-    Serial.print("Message:");
     for (int i = 0; i < length; i++)
     {
       //Serial.print((char)payload[i]);
       msg[i] = (char)payload[i];
     }
     #if HWTYPE == 1
+    Serial.print("Sent following command to EZO pH: ");
+    Serial.println(msg);
+    PH.send_cmd(msg);
+    #endif
+  }
+  if (tmp_topic == ec_command_topic)
+  {
+    for (int i = 0; i < length; i++)
+    {
+      //Serial.print((char)payload[i]);
+      msg[i] = (char)payload[i];
+    }
+    #if HWTYPE == 1
+    Serial.print("Sent following command to EZO EC: ");
+    Serial.println(msg);
     EC.send_cmd(msg);
-    Serial.print(msg);
     #endif
   }
 }
@@ -250,6 +253,13 @@ void startSensors()
     taskReadPH.enable();
     tskscheduler.addTask(taskReadUSonic); //Adds and enablse reading of HC-04 ultrasonic sensor
     taskReadUSonic.enable();
+    //Following block connects to monitoring Rpi and subscribes to EC/pH command channels, where EZO commands can be sent to!
+    cmdclient.connect(mqtt_server);
+    while(!cmdclient.connected()){
+      Serial.print("Waiting for CMD MQTT Connection... ");
+    }
+    cmdclient.subscribe(ec_command_topic.c_str());
+    cmdclient.subscribe(pH_command_topic.c_str());
   }
 #endif
 }
