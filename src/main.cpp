@@ -19,7 +19,7 @@ const char *clientID = nameBuffer.c_str();                       //Copies the st
 
 WiFiClient wifiClient;                                   // Initialise the WiFi and MQTT Client objects
 PubSubClient client("192.168.178.50", 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
-PubSubClient cmdclient("192.168.178.50", 1883, wifiClient);
+//PubSubClient cmdclient("192.168.178.52", 1883, cmdClient);
 Scheduler tskscheduler;                                  //Initializes a TaskScheduler used to
 
 //Function stubs so TaskScheduler doesnt complain
@@ -32,7 +32,7 @@ Task taskDS18B20(TASK_SECOND * 60, TASK_FOREVER, &read_ds18b20);
 //Initialization of the OneWire Bus und the temp sensor
 // GPIO where the DS18B20 is connected to D5 --> Important, D5 needs to be pulled-up to be able to read DS18B20
 int numDevices;                            // Number of temperature devices found (will be used to get and publish all readings)
-OneWire oneWire(D3);               // Setup a oneWire instance to communicate with any OneWire devices for A1/A2/B1 == D5; B2 == D3
+OneWire oneWire(D5);               // Setup a oneWire instance to communicate with any OneWire devices for A1/A2/B1 == D5; B2 == D3
 DallasTemperature dallassensors(&oneWire); // Pass our oneWire reference to Dallas Temperature sensor
 DeviceAddress tempDeviceAddress;           // We'll use this variable to store a found device address for the DS18B20
 
@@ -254,12 +254,15 @@ void startSensors()
     tskscheduler.addTask(taskReadUSonic); //Adds and enablse reading of HC-04 ultrasonic sensor
     taskReadUSonic.enable();
     //Following block connects to monitoring Rpi and subscribes to EC/pH command channels, where EZO commands can be sent to!
-    cmdclient.connect(mqtt_server);
-    while(!cmdclient.connected()){
-      Serial.print("Waiting for CMD MQTT Connection... ");
+    Serial.print("Starting CMD MQTT Connection! ");
+    //cmdclient.setServer(mqtt_server_2, 1883);
+    //cmdclient.connect(clientID);
+    //while(!cmdclient.connected()){
+     // Serial.print("Waiting for CMD MQTT Connection... ");
+    //}
+    if(client.subscribe(ec_command_topic.c_str()) && client.subscribe(pH_command_topic.c_str())){
+      Serial.print("Succesfully subscribed to CMD Topics! ");
     }
-    cmdclient.subscribe(ec_command_topic.c_str());
-    cmdclient.subscribe(pH_command_topic.c_str());
   }
 #endif
 }
@@ -467,6 +470,7 @@ void setup()
   Serial.begin(9600);                     // Initialize the I2C bus (BH1750 library doesn't do this automatically)
   Wire.begin();                           // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
   client.setCallback(mqtt_callback);      //Tells the pubsubclient which function to use in case of a callback
+  //cmdclient.setCallback(mqtt_callback);
   tskscheduler.addTask(taskStartSensors); //Adds task to scheduler list
   taskStartSensors.enable();              //Enables the start sensors task
 }
@@ -478,12 +482,13 @@ void loop()
     connect_wifi("FRITZ!Box Fon WLAN 7390", "3830429555162473");
     //connect_wifi("Hood Lan","Ja17081994Yp08091992");
   }
-  /*if (!client.connected())
+  /*if (!cmdclient.connected())
   {
-    connect_MQTT(mqtt_server, 1883);
+    cmdclient.connect(clientID);
   }*/
   tskscheduler.execute();
   client.loop();
+ // cmdclient.loop();
 }
 /*
 void measure_soil()
