@@ -2,7 +2,7 @@
  This code was written/hacked together by Swen Schreiter and is the basis for the multifunctional environmental sensing device called S.E.E.D (Small Electronic Environmental Device).
 Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in a research environment.
  **/
-#define HWTYPE 1    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
+#define HWTYPE 0    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
 #define TENTNO "B2" //Number of research tent either A1/A2/B1/B2/C1/C2
 
 // Include the libraries we need
@@ -18,9 +18,9 @@ String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId(), HEX); //String(random
 const char *clientID = nameBuffer.c_str();                       //Copies the string in the char array used by the mqtt library
 
 WiFiClient wifiClient;                                   // Initialise the WiFi and MQTT Client objects
-PubSubClient client("192.168.178.50", 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
+PubSubClient client("192.168.178.52", 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
 //PubSubClient cmdclient("192.168.178.52", 1883, cmdClient);
-Scheduler tskscheduler;                                  //Initializes a TaskScheduler used to
+Scheduler tskscheduler; //Initializes a TaskScheduler used to
 
 //Function stubs so TaskScheduler doesnt complain
 void startSensors();
@@ -32,7 +32,7 @@ Task taskDS18B20(TASK_SECOND * 60, TASK_FOREVER, &read_ds18b20);
 //Initialization of the OneWire Bus und the temp sensor
 // GPIO where the DS18B20 is connected to D5 --> Important, D5 needs to be pulled-up to be able to read DS18B20
 int numDevices;                            // Number of temperature devices found (will be used to get and publish all readings)
-OneWire oneWire(D5);               // Setup a oneWire instance to communicate with any OneWire devices for A1/A2/B1 == D5; B2 == D3
+OneWire oneWire(D3);                       // Setup a oneWire instance to communicate with any OneWire devices for A1/A2/B1 == D5; B2 == D3
 DallasTemperature dallassensors(&oneWire); // Pass our oneWire reference to Dallas Temperature sensor
 DeviceAddress tempDeviceAddress;           // We'll use this variable to store a found device address for the DS18B20
 
@@ -45,12 +45,12 @@ String dallas_temp_0_string, dallas_temp_1_string, dallas_temp_2_string; //Varia
 const char *mqtt_server = "192.168.178.50";                                                       //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 const char *mqtt_server_2 = "192.168.178.52";                                                     //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 String mqtt_connection_topic = "aeroponic/" + String(TENTNO) + "/connection/" + String(clientID); //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
-String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/command";       //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
-String ec_command_topic = "aeroponic/" + String(TENTNO) + "/ec/command";       //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/command";                          //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
+String ec_command_topic = "aeroponic/" + String(TENTNO) + "/ec/command";                          //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 
-String temp_ds18b20_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor1";      //Adds MQTT topic for the dallas sensor 1 in the root zone
-String temp_ds18b20_topic_2 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor2";      //Adds MQTT topic for the dallas senssor 2
-String temp_ds18b20_topic_3 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor3";      //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
+String temp_ds18b20_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor1"; //Adds MQTT topic for the dallas sensor 1 in the root zone
+String temp_ds18b20_topic_2 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor2"; //Adds MQTT topic for the dallas senssor 2
+String temp_ds18b20_topic_3 = "aeroponic/" + String(TENTNO) + "/temperature/d18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
 
 #if HWTYPE == 0 //
 //#include <SPI.h>
@@ -71,10 +71,10 @@ Adafruit_BME280 bme; // Create BME280 instance for the first sensor
 //Initialization of all environmental variables as global to share them between functions
 float bme280_temp, bme280_humidity, bme280_pressure, bme280_altitude; //Sets the altitutde variable bme_altitutde to zero
 
-String temp_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor1";       //Adds MQTT topic for the sensor readings of the aero-grow-tables
-String humidity_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor1";      //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String temp_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor1";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String humidity_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 String pressure_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-String temp_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor2";   //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String temp_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor2";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
 String humidity_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 String pressure_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 #else
@@ -108,14 +108,23 @@ Task taskReadUSonic(TASK_MINUTE * 5, TASK_FOREVER, &read_usonic);
 //Task taskReadDSB(TASK_MINUTE, TASK_FOREVER, &read_ds18b20);
 
 //MQTT: Include the following topics to send data value correctly for pH and EC
-String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ph/sensor1";         //Adds MQTT topic for the AtlasScientific pH probe
+String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ph/sensor1"; //Adds MQTT topic for the AtlasScientific pH probe
 
-String ec_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ec/sensor1";         //Adds MQTT topic for the AtlasScientific pH probe
+String ec_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ec/sensor1"; //Adds MQTT topic for the AtlasScientific pH probe
 
 String fuellstand_topic = "aeroponic/" + String(TENTNO) + "/solution_level";   //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 String solution_temp_topic = "aeroponic/" + String(TENTNO) + "/solution_temp"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
 
 #endif
+
+void tca_bus_select(uint8_t i)
+{
+  if (i > 7)
+    return;
+  Wire.beginTransmission(0x70);
+  Wire.write(1 << i);
+  Wire.endTransmission();
+}
 
 void connect_wifi(const char *var_ssid, const char *var_wifi_password)
 {
@@ -202,11 +211,11 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length)
       //Serial.print((char)payload[i]);
       msg[i] = (char)payload[i];
     }
-    #if HWTYPE == 1
+#if HWTYPE == 1
     Serial.print("Sent following command to EZO pH: ");
     Serial.println(msg);
     PH.send_cmd(msg);
-    #endif
+#endif
   }
   if (tmp_topic == ec_command_topic)
   {
@@ -215,11 +224,11 @@ void mqtt_callback(char *topic, byte *payload, unsigned int length)
       //Serial.print((char)payload[i]);
       msg[i] = (char)payload[i];
     }
-    #if HWTYPE == 1
+#if HWTYPE == 1
     Serial.print("Sent following command to EZO EC: ");
     Serial.println(msg);
     EC.send_cmd(msg);
-    #endif
+#endif
   }
 }
 void startSensors()
@@ -231,12 +240,21 @@ void startSensors()
   taskDS18B20.enable();
 
 #if HWTYPE == 0
+  //Each BME280 needs to be initialized individually. For this a for-loop with TCA select is necessary.
+  for (uint16_t i = 1; i < 2; i++)
+  {
+    /* code */
+  tca_bus_select(i);
   if (!bme.begin(0x76))
   { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
-    Serial.println(F("Could not find BME280 sensor, check wiring!"));
+    Serial.print(F("Could not find BME280 sensor, check wiring! Of line: "));
+    Serial.println(i);
     //while (1)
     //delay(10);
   }
+  }
+  
+  
   Serial.print("HWTYPE is 0, BME280 and DS18B20 sensors need to be started!");
   if (taskStartSensors.isFirstIteration())
   {
@@ -258,9 +276,10 @@ void startSensors()
     //cmdclient.setServer(mqtt_server_2, 1883);
     //cmdclient.connect(clientID);
     //while(!cmdclient.connected()){
-     // Serial.print("Waiting for CMD MQTT Connection... ");
+    // Serial.print("Waiting for CMD MQTT Connection... ");
     //}
-    if(client.subscribe(ec_command_topic.c_str()) && client.subscribe(pH_command_topic.c_str())){
+    if (client.subscribe(ec_command_topic.c_str()) && client.subscribe(pH_command_topic.c_str()))
+    {
       Serial.print("Succesfully subscribed to CMD Topics! ");
     }
   }
@@ -330,47 +349,40 @@ void read_ds18b20()
 #endif
 }
 #if HWTYPE == 0
-void tca_bus_select(uint8_t i)
-{
-  if (i > 7)
-    return;
-  Wire.beginTransmission(0x70);
-  Wire.write(1 << i);
-  Wire.endTransmission();
-}
 void measure_bme280(int tca_bus)
 {
   tca_bus_select(tca_bus);
 #define SEALEVELPRESSURE_HPA (1013.25) //Defines the pressure at sea level to calculate the approximate alltitude via the current pressure level
   bme280_temp = bme.readTemperature(); //Sets the variable temp to the temp measure of the BME280
-  Serial.print(bme280_temp);
+  Serial.print("Temperature of BME280: ");
+  Serial.println(bme280_temp);
+  Serial.print("Humidity of BME280: ");
   bme280_humidity = bme.readHumidity(); //Sets variable bme_humidity to humidity measure of BME280
-  Serial.print(bme280_humidity);
+  Serial.println(bme280_humidity);
+  Serial.print("Pressure of BME280: ");
   bme280_pressure = bme.readPressure(); //Sets variable bme_pressure to pressure measire of BME280
-  Serial.print(bme280_pressure);
+  Serial.println(bme280_pressure);
   //float bme280_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
 }
 void read_bme280()
 {
-  measure_bme280(0);
-  send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_1),mqtt_server);
-  send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_1),mqtt_server);
-  send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_1),mqtt_server);
-  
-  send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_1),mqtt_server_2);
-  send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_1),mqtt_server_2);
-  send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_1),mqtt_server_2);
-  
-  measure_bme280(7);
-  send_data_MQTT(String(bme280_temp), temp_bme280_topic_2,mqtt_server);
-  send_data_MQTT(String(bme280_humidity), humidity_bme280_topic_2,mqtt_server);
-  send_data_MQTT(String(bme280_pressure), pressure_bme280_topic_2,mqtt_server);
+  measure_bme280(1); //First revision B2 uses TCA 2 and 3
+  send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_1), mqtt_server);
+  send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_1), mqtt_server);
+  send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_1), mqtt_server);
 
-  send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_2),mqtt_server_2);
-  send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_2),mqtt_server_2);
-  send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_2),mqtt_server_2);
-  
-  
+  send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_1), mqtt_server_2);
+  send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_1), mqtt_server_2);
+  send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_1), mqtt_server_2);
+
+  measure_bme280(2); //First revision B2 uses TCA 1 to 3
+  send_data_MQTT(String(bme280_temp), temp_bme280_topic_2, mqtt_server);
+  send_data_MQTT(String(bme280_humidity), humidity_bme280_topic_2, mqtt_server);
+  send_data_MQTT(String(bme280_pressure), pressure_bme280_topic_2, mqtt_server);
+
+  send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_2), mqtt_server_2);
+  send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_2), mqtt_server_2);
+  send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_2), mqtt_server_2);
 }
 #else
 void read_PH()
@@ -467,9 +479,9 @@ void read_usonic()
 #endif
 void setup()
 {
-  Serial.begin(9600);                     // Initialize the I2C bus (BH1750 library doesn't do this automatically)
-  Wire.begin();                           // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
-  client.setCallback(mqtt_callback);      //Tells the pubsubclient which function to use in case of a callback
+  Serial.begin(9600);                // Initialize the I2C bus (BH1750 library doesn't do this automatically)
+  Wire.begin();                      // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
+  client.setCallback(mqtt_callback); //Tells the pubsubclient which function to use in case of a callback
   //cmdclient.setCallback(mqtt_callback);
   tskscheduler.addTask(taskStartSensors); //Adds task to scheduler list
   taskStartSensors.enable();              //Enables the start sensors task
@@ -488,7 +500,7 @@ void loop()
   }*/
   tskscheduler.execute();
   client.loop();
- // cmdclient.loop();
+  // cmdclient.loop();
 }
 /*
 void measure_soil()
