@@ -57,28 +57,33 @@ String temp_ds18b20_topic_3 = "aeroponic/" + String(TENTNO) + "/temperature/ds18
 #include "Adafruit_BME280.h" //Adds library for the BME280 (Bosch) environmental sensor
 #include <Adafruit_BMP280.h> //Adds library to use BMP280 sensors
 #include "Adafruit_Sensor.h" //Adds library for all Adafruit sensors to make them usable
+#include <HTU21D.h> //For the SHT21 sensor
 #define TCAADDR 0x70
 
 //Functions stubs so VSCode doesn't complain
 void read_bme280();
+void read_sht21();
 void read_ds18b20();
 //void read_soilmoisture();
 
 Task taskBME280(TASK_SECOND * 30, TASK_FOREVER, &read_bme280);
+Task taskSHT21(TASK_SECOND * 30, TASK_FOREVER, &read_sht21);
 ////Task taskSoilMoisture(TASK_MINUTE * 10, TASK_FOREVER, &read_soilmoisture);
 
 Adafruit_BME280 bme; // Create BME280 instance for the first sensor
+HTU21D sht21(HTU21D_RES_RH12_TEMP14); //Initializes the SHT21
 //Adafruit_BMP280 bmp; // I2C
 //Initialization of all environmental variables as global to share them between functions
 float bme280_temp, bme280_humidity, bme280_pressure, bme280_altitude; //Sets the altitutde variable bme_altitutde to zero
+float sht21_temp, sht21_humidity, ; //Sets the altitutde variable bme_altitutde to zero
 //float bmp280_temp, bmp280_humidity, bmp280_pressure, bmp280_altitude; //Sets the altitutde variable bme_altitutde to zero
 
-String temp_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor1";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
-String humidity_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-String pressure_bme280_topic_1 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-String temp_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor2";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
-String humidity_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
-String pressure_bme280_topic_2 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String temp_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor1";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String humidity_topic_1 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String pressure_topic_1 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String temp_topic_2 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor2";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String humidty_topic_2 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String pressure_topic_2 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 #else
 
 #include <Ezo_i2c.h>      //include the EZO I2C library from https://github.com/Atlas-Scientific/Ezo_I2c_lib
@@ -369,22 +374,50 @@ void startSensors()
   void read_bme280()
   {
     measure_bme280(1); //First revision B2 uses TCA 1 and 3
-    send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_1), mqtt_server);
-    send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_1), mqtt_server);
-    send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_1), mqtt_server);
+    send_data_MQTT(String(bme280_temp), String(temp_topic_1), mqtt_server);
+    send_data_MQTT(String(bme280_humidity), String(humidity_topic_1), mqtt_server);
+    send_data_MQTT(String(bme280_pressure), String(pressure_topic_1), mqtt_server);
 
-    send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_1), mqtt_server_2);
-    send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_1), mqtt_server_2);
-    send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_1), mqtt_server_2);
+    send_data_MQTT(String(bme280_temp), String(temp_topic_1), mqtt_server_2);
+    send_data_MQTT(String(bme280_humidity), String(humidity_topic_1), mqtt_server_2);
+    send_data_MQTT(String(bme280_pressure), String(pressure_topic_1), mqtt_server_2);
 
     measure_bme280(2); //First revision B2 uses TCA 1 to 3
-    send_data_MQTT(String(bme280_temp), temp_bme280_topic_2, mqtt_server);
-    send_data_MQTT(String(bme280_humidity), humidity_bme280_topic_2, mqtt_server);
-    send_data_MQTT(String(bme280_pressure), pressure_bme280_topic_2, mqtt_server);
+    send_data_MQTT(String(bme280_temp), temp_topic_2, mqtt_server);
+    send_data_MQTT(String(bme280_humidity), humidty_topic_2, mqtt_server);
+    send_data_MQTT(String(bme280_pressure), pressure_topic_2, mqtt_server);
 
-    send_data_MQTT(String(bme280_temp), String(temp_bme280_topic_2), mqtt_server_2);
-    send_data_MQTT(String(bme280_humidity), String(humidity_bme280_topic_2), mqtt_server_2);
-    send_data_MQTT(String(bme280_pressure), String(pressure_bme280_topic_2), mqtt_server_2);
+    send_data_MQTT(String(bme280_temp), String(temp_topic_2), mqtt_server_2);
+    send_data_MQTT(String(bme280_humidity), String(humidty_topic_2), mqtt_server_2);
+    send_data_MQTT(String(bme280_pressure), String(pressure_topic_2), mqtt_server_2);
+  }
+void measure_sht21(int tca_bus)
+  {
+    tca_bus_select(tca_bus);
+    sht21_temp = sht21.readTemperature(); //Sets the variable temp to the temp measure of the BME280
+    Serial.print("Temperature of SHT21: ");
+    Serial.println(sht21_temp);
+    Serial.print("Humidity of SHT21: ");
+    sht21_humidity = sht21.readHumidity(); //Sets variable bme_humidity to humidity measure of BME280
+    Serial.println(sht21_humidity);
+    //float bme280_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+  }
+void read_sht21()
+  {
+    measure_sht21(1); //First revision B2 uses TCA 1 and 3
+    send_data_MQTT(String(sht21_temp), String(temp_topic_1), mqtt_server);
+    send_data_MQTT(String(sht21_humidity), String(humidity_topic_1), mqtt_server);
+    
+
+    send_data_MQTT(String(sht21_temp), String(temp_topic_1), mqtt_server_2);
+    send_data_MQTT(String(sht21_humidity), String(humidity_topic_1), mqtt_server_2);
+    
+    measure_sht21(2); //First revision B2 uses TCA 1 to 3
+    send_data_MQTT(String(sht21_temp), temp_topic_2, mqtt_server);
+    send_data_MQTT(String(sht21_humidity), humidty_topic_2, mqtt_server);
+
+    send_data_MQTT(String(sht21_temp), String(temp_topic_2), mqtt_server_2);
+    send_data_MQTT(String(sht21_humidity), String(humidty_topic_2), mqtt_server_2);
   }
 #else
 void read_PH()
