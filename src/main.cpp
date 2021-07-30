@@ -87,7 +87,7 @@ String pressure_topic_2 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sens
 #else
 
 #include <Ezo_i2c.h>      //include the EZO I2C library from https://github.com/Atlas-Scientific/Ezo_I2c_lib
-#include "Ezo_i2c_util.h" //brings in common print statements
+//#include "Ezo_i2c_util.h" //brings in common print statements
 //#include <U8g2lib.h>      //Needed for OLED Screen
 
 Ezo_board EC = Ezo_board(100, "EC"); //create an EC circuit object who's address is 100 and name is "EC"
