@@ -3,7 +3,7 @@
 Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in a research environment.
  **/
 #define HWTYPE 1    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
-#define TENTNO "C1" //Number of research tent either A1/A2/B1/B2/C1/C2
+#define TENTNO "A1" //Number of research tent either A1/A2/B1/B2/C1/C2
 
 // Include the libraries we need
 #include "Arduino.h"
@@ -32,7 +32,7 @@ Task taskDS18B20(TASK_SECOND * 60, TASK_FOREVER, &read_ds18b20);
 //Initialization of the OneWire Bus und the temp sensor
 // GPIO where the DS18B20 is connected to D5 --> Important, D5 needs to be pulled-up to be able to read DS18B20
 int numDevices;                            // Number of temperature devices found (will be used to get and publish all readings)
-OneWire oneWire(D3);                       // Setup a oneWire instance to communicate with any OneWire devices for A1/A2/B1 == D5; B2 == D3
+OneWire oneWire(D5);                       // Setup a oneWire instance to communicate with any OneWire devices for A1/A2/B1 == D5; B2 == D3
 DallasTemperature dallassensors(&oneWire); // Pass our oneWire reference to Dallas Temperature sensor
 DeviceAddress tempDeviceAddress;           // We'll use this variable to store a found device address for the DS18B20
 
@@ -57,7 +57,7 @@ String temp_ds18b20_topic_3 = "aeroponic/" + String(TENTNO) + "/temperature/ds18
 #include "Adafruit_BME280.h" //Adds library for the BME280 (Bosch) environmental sensor
 #include <Adafruit_BMP280.h> //Adds library to use BMP280 sensors
 #include "Adafruit_Sensor.h" //Adds library for all Adafruit sensors to make them usable
-#include <HTU21D.h> //For the SHT21 sensor
+#include <HTU21D.h>          //For the SHT21 sensor
 #define TCAADDR 0x70
 
 //Functions stubs so VSCode doesn't complain
@@ -70,23 +70,23 @@ Task taskBME280(TASK_SECOND * 30, TASK_FOREVER, &read_bme280);
 Task taskSHT21(TASK_SECOND * 30, TASK_FOREVER, &read_sht21);
 ////Task taskSoilMoisture(TASK_MINUTE * 10, TASK_FOREVER, &read_soilmoisture);
 
-Adafruit_BME280 bme; // Create BME280 instance for the first sensor
-HTU21D sht21(HTU21D_RES_RH12_TEMP14); //Initializes the SHT21
+Adafruit_BME280 bme;                  // Create BME280 instance for the first sensor
+HTU21D sht21; //Initializes the SHT21
 //Adafruit_BMP280 bmp; // I2C
 //Initialization of all environmental variables as global to share them between functions
 float bme280_temp, bme280_humidity, bme280_pressure, bme280_altitude; //Sets the altitutde variable bme_altitutde to zero
-float sht21_temp, sht21_humidity, ; //Sets the altitutde variable bme_altitutde to zero
+float sht21_temp, sht21_humidity ;                                   //Sets the altitutde variable bme_altitutde to zero
 //float bmp280_temp, bmp280_humidity, bmp280_pressure, bmp280_altitude; //Sets the altitutde variable bme_altitutde to zero
 
 String temp_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor1";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
 String humidity_topic_1 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 String pressure_topic_1 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sensor1"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 String temp_topic_2 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor2";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
-String humidty_topic_2 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
+String humidty_topic_2 = "aeroponic/" + String(TENTNO) + "/humidity/bme280/sensor2";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
 String pressure_topic_2 = "aeroponic/" + String(TENTNO) + "/pressure/bme280/sensor2"; //Adds MQTT topic for the sensor readings of the aero-grow-tables
 #else
 
-#include <Ezo_i2c.h>      //include the EZO I2C library from https://github.com/Atlas-Scientific/Ezo_I2c_lib
+#include <Ezo_i2c.h> //include the EZO I2C library from https://github.com/Atlas-Scientific/Ezo_I2c_lib
 //#include "Ezo_i2c_util.h" //brings in common print statements
 //#include <U8g2lib.h>      //Needed for OLED Screen
 
@@ -242,7 +242,7 @@ void startSensors()
   Serial.print(" Starting Sensors! Beginning with DS18B20 ");
   dallassensors.begin();                       //Activates the DS18b20 sensors on the one wire
   numDevices = dallassensors.getDeviceCount(); //Stores the DS18BB20 addresses on the ONEWIRE
-  connect_MQTT(mqtt_server_2, 1883);
+  connect_MQTT(mqtt_server, 1883);
   tskscheduler.addTask(taskDS18B20);
   taskDS18B20.enable();
 
@@ -260,12 +260,19 @@ void startSensors()
       //while (1)
       //delay(10);
     }
+    if(!sht21.begin(D2, D1))
+    {
+      Serial.print(F("Could not find SHT21 sensor, check wiring! Of line: "));
+      Serial.println(i);
+    }
 
     Serial.print("HWTYPE is 0, BME280 and DS18B20 sensors need to be started!");
     if (taskStartSensors.isFirstIteration())
     {
       tskscheduler.addTask(taskBME280);
       taskBME280.enable();
+      tskscheduler.addTask(taskSHT21);
+      taskSHT21.enable();
     }
   }
 #else
@@ -291,134 +298,133 @@ void startSensors()
     }
   }
 #endif
-  }
-  void measure_ds18b20()
+}
+void measure_ds18b20()
+{
+  dallassensors.requestTemperatures(); //Sends a request to the DS18B20 to prepare a temperature reading
+  // Loop through each device, print out temperature data
+  for (int i = 0; i < numDevices; i++)
   {
-    dallassensors.requestTemperatures(); //Sends a request to the DS18B20 to prepare a temperature reading
-    // Loop through each device, print out temperature data
-    for (int i = 0; i < numDevices; i++)
+    // Search the wire for address
+    if (dallassensors.getAddress(tempDeviceAddress, i))
     {
-      // Search the wire for address
-      if (dallassensors.getAddress(tempDeviceAddress, i))
+      if (i == 0)
       {
-        if (i == 0)
-        {
-          // Output the device ID
-          Serial.print("Temperature for device: ");
-          Serial.println(i, DEC);
+        // Output the device ID
+        Serial.print("Temperature for device: ");
+        Serial.println(i, DEC);
 
-          // Print the data
-          dallas_temp_0 = dallassensors.getTempC(tempDeviceAddress);
-          Serial.print("Temp C: ");
-          Serial.print(dallas_temp_0);
-          Serial.println(String(dallas_temp_0) + " of sensor " + i); //To allow debugging a serial output is written if the measurment was published succesfully.
-        }
-        // Again, client.publish will return a boolean value depending on whether it succeded or not.
-        // If the message failed to send, we will try again, as the connection may have broken.
-        if (i == 1)
-        {
-          // Output the device ID
-          Serial.print("Temperature for device: ");
-          Serial.println(i, DEC);
-
-          // Print the data
-          dallas_temp_1 = dallassensors.getTempC(tempDeviceAddress);
-          Serial.println(String(dallas_temp_1) + " of sensor" + i + "received!"); //To allow debugging a serial output is written if the measurment was published succesfully.
-        }
-        if (i == 2)
-        {
-          // Output the device ID
-          Serial.print("Temperature for device: ");
-          Serial.println(i, DEC);
-
-          // Print the data
-          dallas_temp_2 = dallassensors.getTempC(tempDeviceAddress);
-          Serial.println(String(dallas_temp_2) + " of sensor" + i + "received!"); //To allow debugging a serial output is written if the measurment was published succesfully.
-        }
+        // Print the data
+        dallas_temp_0 = dallassensors.getTempC(tempDeviceAddress);
+        Serial.print("Temp C: ");
+        Serial.print(dallas_temp_0);
+        Serial.println(String(dallas_temp_0) + " of sensor " + i); //To allow debugging a serial output is written if the measurment was published succesfully.
       }
-      //float temperatureC = dallassensors.getTempCByIndex(0); //Adds the value of the 0 device of temperature to the variable tempc
-    }
-  }
-  void read_ds18b20()
-  {
-    measure_ds18b20();
-#if HWTYPE == 0
-    send_data_MQTT(String(dallas_temp_0), temp_ds18b20_topic_1, mqtt_server);
-    send_data_MQTT(String(dallas_temp_1), temp_ds18b20_topic_2, mqtt_server);
-    send_data_MQTT(String(dallas_temp_2), temp_ds18b20_topic_3, mqtt_server);
+      // Again, client.publish will return a boolean value depending on whether it succeded or not.
+      // If the message failed to send, we will try again, as the connection may have broken.
+      if (i == 1)
+      {
+        // Output the device ID
+        Serial.print("Temperature for device: ");
+        Serial.println(i, DEC);
 
-    send_data_MQTT(String(dallas_temp_0), temp_ds18b20_topic_1, mqtt_server_2);
-    send_data_MQTT(String(dallas_temp_1), temp_ds18b20_topic_2, mqtt_server_2);
-    send_data_MQTT(String(dallas_temp_2), temp_ds18b20_topic_3, mqtt_server_2);
+        // Print the data
+        dallas_temp_1 = dallassensors.getTempC(tempDeviceAddress);
+        Serial.println(String(dallas_temp_1) + " of sensor" + i + "received!"); //To allow debugging a serial output is written if the measurment was published succesfully.
+      }
+      if (i == 2)
+      {
+        // Output the device ID
+        Serial.print("Temperature for device: ");
+        Serial.println(i, DEC);
+
+        // Print the data
+        dallas_temp_2 = dallassensors.getTempC(tempDeviceAddress);
+        Serial.println(String(dallas_temp_2) + " of sensor" + i + "received!"); //To allow debugging a serial output is written if the measurment was published succesfully.
+      }
+    }
+    //float temperatureC = dallassensors.getTempCByIndex(0); //Adds the value of the 0 device of temperature to the variable tempc
+  }
+}
+void read_ds18b20()
+{
+  measure_ds18b20();
+#if HWTYPE == 0
+  send_data_MQTT(String(dallas_temp_0), temp_ds18b20_topic_1, mqtt_server);
+  send_data_MQTT(String(dallas_temp_1), temp_ds18b20_topic_2, mqtt_server);
+  send_data_MQTT(String(dallas_temp_2), temp_ds18b20_topic_3, mqtt_server);
+
+  send_data_MQTT(String(dallas_temp_0), temp_ds18b20_topic_1, mqtt_server_2);
+  send_data_MQTT(String(dallas_temp_1), temp_ds18b20_topic_2, mqtt_server_2);
+  send_data_MQTT(String(dallas_temp_2), temp_ds18b20_topic_3, mqtt_server_2);
 #elif HWTYPE == 1
   send_data_MQTT(String(dallas_temp_0), solution_temp_topic, mqtt_server);
   send_data_MQTT(String(dallas_temp_0), solution_temp_topic, mqtt_server_2);
 #endif
-  }
+}
 #if HWTYPE == 0
-  void measure_bme280(int tca_bus)
-  {
-    tca_bus_select(tca_bus);
-#define SEALEVELPRESSURE_HPA (1013.25)   //Defines the pressure at sea level to calculate the approximate alltitude via the current pressure level
-    bme280_temp = bme.readTemperature(); //Sets the variable temp to the temp measure of the BME280
-    Serial.print("Temperature of BME280: ");
-    Serial.println(bme280_temp);
-    Serial.print("Humidity of BME280: ");
-    bme280_humidity = bme.readHumidity(); //Sets variable bme_humidity to humidity measure of BME280
-    Serial.println(bme280_humidity);
-    Serial.print("Pressure of BME280: ");
-    bme280_pressure = bme.readPressure(); //Sets variable bme_pressure to pressure measire of BME280
-    Serial.println(bme280_pressure);
-    //float bme280_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
-  }
-  void read_bme280()
-  {
-    measure_bme280(1); //First revision B2 uses TCA 1 and 3
-    send_data_MQTT(String(bme280_temp), String(temp_topic_1), mqtt_server);
-    send_data_MQTT(String(bme280_humidity), String(humidity_topic_1), mqtt_server);
-    send_data_MQTT(String(bme280_pressure), String(pressure_topic_1), mqtt_server);
+void measure_bme280(int tca_bus)
+{
+  tca_bus_select(tca_bus);
+#define SEALEVELPRESSURE_HPA (1013.25) //Defines the pressure at sea level to calculate the approximate alltitude via the current pressure level
+  bme280_temp = bme.readTemperature(); //Sets the variable temp to the temp measure of the BME280
+  Serial.print("Temperature of BME280: ");
+  Serial.println(bme280_temp);
+  Serial.print("Humidity of BME280: ");
+  bme280_humidity = bme.readHumidity(); //Sets variable bme_humidity to humidity measure of BME280
+  Serial.println(bme280_humidity);
+  Serial.print("Pressure of BME280: ");
+  bme280_pressure = bme.readPressure(); //Sets variable bme_pressure to pressure measire of BME280
+  Serial.println(bme280_pressure);
+  //float bme280_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+}
+void read_bme280()
+{
+  measure_bme280(1); //First revision B2 uses TCA 1 and 3
+  send_data_MQTT(String(bme280_temp), String(temp_topic_1), mqtt_server);
+  send_data_MQTT(String(bme280_humidity), String(humidity_topic_1), mqtt_server);
+  send_data_MQTT(String(bme280_pressure), String(pressure_topic_1), mqtt_server);
 
-    send_data_MQTT(String(bme280_temp), String(temp_topic_1), mqtt_server_2);
-    send_data_MQTT(String(bme280_humidity), String(humidity_topic_1), mqtt_server_2);
-    send_data_MQTT(String(bme280_pressure), String(pressure_topic_1), mqtt_server_2);
+  send_data_MQTT(String(bme280_temp), String(temp_topic_1), mqtt_server_2);
+  send_data_MQTT(String(bme280_humidity), String(humidity_topic_1), mqtt_server_2);
+  send_data_MQTT(String(bme280_pressure), String(pressure_topic_1), mqtt_server_2);
 
-    measure_bme280(2); //First revision B2 uses TCA 1 to 3
-    send_data_MQTT(String(bme280_temp), temp_topic_2, mqtt_server);
-    send_data_MQTT(String(bme280_humidity), humidty_topic_2, mqtt_server);
-    send_data_MQTT(String(bme280_pressure), pressure_topic_2, mqtt_server);
+  measure_bme280(2); //First revision B2 uses TCA 1 to 3
+  send_data_MQTT(String(bme280_temp), temp_topic_2, mqtt_server);
+  send_data_MQTT(String(bme280_humidity), humidty_topic_2, mqtt_server);
+  send_data_MQTT(String(bme280_pressure), pressure_topic_2, mqtt_server);
 
-    send_data_MQTT(String(bme280_temp), String(temp_topic_2), mqtt_server_2);
-    send_data_MQTT(String(bme280_humidity), String(humidty_topic_2), mqtt_server_2);
-    send_data_MQTT(String(bme280_pressure), String(pressure_topic_2), mqtt_server_2);
-  }
+  send_data_MQTT(String(bme280_temp), String(temp_topic_2), mqtt_server_2);
+  send_data_MQTT(String(bme280_humidity), String(humidty_topic_2), mqtt_server_2);
+  send_data_MQTT(String(bme280_pressure), String(pressure_topic_2), mqtt_server_2);
+}
 void measure_sht21(int tca_bus)
-  {
-    tca_bus_select(tca_bus);
-    sht21_temp = sht21.readTemperature(); //Sets the variable temp to the temp measure of the BME280
-    Serial.print("Temperature of SHT21: ");
-    Serial.println(sht21_temp);
-    Serial.print("Humidity of SHT21: ");
-    sht21_humidity = sht21.readHumidity(); //Sets variable bme_humidity to humidity measure of BME280
-    Serial.println(sht21_humidity);
-    //float bme280_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
-  }
+{
+  tca_bus_select(tca_bus);
+  sht21_temp = sht21.readTemperature(); //Sets the variable temp to the temp measure of the BME280
+  Serial.print("Temperature of SHT21: ");
+  Serial.println(sht21_temp);
+  Serial.print("Humidity of SHT21: ");
+  sht21_humidity = sht21.readHumidity(); //Sets variable bme_humidity to humidity measure of BME280
+  Serial.println(sht21_humidity);
+  //float bme280_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+}
 void read_sht21()
-  {
-    measure_sht21(1); //First revision B2 uses TCA 1 and 3
-    send_data_MQTT(String(sht21_temp), String(temp_topic_1), mqtt_server);
-    send_data_MQTT(String(sht21_humidity), String(humidity_topic_1), mqtt_server);
-    
+{
+  measure_sht21(1); //First revision B2 uses TCA 1 and 3
+  send_data_MQTT(String(sht21_temp), String(temp_topic_1), mqtt_server);
+  send_data_MQTT(String(sht21_humidity), String(humidity_topic_1), mqtt_server);
 
-    send_data_MQTT(String(sht21_temp), String(temp_topic_1), mqtt_server_2);
-    send_data_MQTT(String(sht21_humidity), String(humidity_topic_1), mqtt_server_2);
-    
-    measure_sht21(2); //First revision B2 uses TCA 1 to 3
-    send_data_MQTT(String(sht21_temp), temp_topic_2, mqtt_server);
-    send_data_MQTT(String(sht21_humidity), humidty_topic_2, mqtt_server);
+  send_data_MQTT(String(sht21_temp), String(temp_topic_1), mqtt_server_2);
+  send_data_MQTT(String(sht21_humidity), String(humidity_topic_1), mqtt_server_2);
 
-    send_data_MQTT(String(sht21_temp), String(temp_topic_2), mqtt_server_2);
-    send_data_MQTT(String(sht21_humidity), String(humidty_topic_2), mqtt_server_2);
-  }
+  measure_sht21(2); //First revision B2 uses TCA 1 to 3
+  send_data_MQTT(String(sht21_temp), temp_topic_2, mqtt_server);
+  send_data_MQTT(String(sht21_humidity), humidty_topic_2, mqtt_server);
+
+  send_data_MQTT(String(sht21_temp), String(temp_topic_2), mqtt_server_2);
+  send_data_MQTT(String(sht21_humidity), String(humidty_topic_2), mqtt_server_2);
+}
 #else
 void read_PH()
 {
@@ -479,6 +485,7 @@ void parse_EC()
 }
 void read_usonic()
 {
+  //Add #define max_fuellstand per container
   //Durchmeser Fass: d = 40cm, Höhe h = 60cm, Fassungsvermögen = 60l distance_measured
   int trigger = D7;            // Der Trigger Pin
   int echo = D8;               // Der Echo Pin
@@ -495,12 +502,14 @@ void read_usonic()
   distance_measured = ((usonic_time / 2) / 29.1); // 29.1;           // Die Zeit in den Weg in Zentimeter umrechnen
   Serial.print(distance_measured);                // Den Weg in Zentimeter ausgeben
   Serial.println(" cm");                          //
-  float fuellstand = (((PI * (400.0))));
+  //float fuellstand = (((PI * (400.0))));
+  float fuellstand = (56*37);
   fuellstand = fuellstand * (distance_measured);
   fuellstand = fuellstand / 1000;
+  fuellstand = 78.736 - fuellstand;  //Maximum fuellstand for A1/A2 and C1/C2
   Serial.print(fuellstand); // Den Weg in Zentimeter ausgeben
   Serial.println(" l");     //
-  if (fuellstand < 60)
+  if (fuellstand < 78.736)
   {
     send_data_MQTT(String(fuellstand), String(fuellstand_topic), mqtt_server);
     send_data_MQTT(String(fuellstand), String(fuellstand_topic), mqtt_server_2);
@@ -512,32 +521,32 @@ void read_usonic()
   }
 }
 #endif
-  void setup()
+void setup()
+{
+  Serial.begin(9600);                // Initialize the I2C bus (BH1750 library doesn't do this automatically)
+  Wire.begin();                      // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
+  client.setCallback(mqtt_callback); //Tells the pubsubclient which function to use in case of a callback
+  //cmdclient.setCallback(mqtt_callback);
+  tskscheduler.addTask(taskStartSensors); //Adds task to scheduler list
+  taskStartSensors.enable();              //Enables the start sensors task
+}
+void loop()
+{ //This function will continously be executed; everything which needs to be done recurringly is set here.
+  //unsigned long now = millis();
+  if (WiFi.status() != WL_CONNECTED)
   {
-    Serial.begin(9600);                // Initialize the I2C bus (BH1750 library doesn't do this automatically)
-    Wire.begin();                      // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
-    client.setCallback(mqtt_callback); //Tells the pubsubclient which function to use in case of a callback
-    //cmdclient.setCallback(mqtt_callback);
-    tskscheduler.addTask(taskStartSensors); //Adds task to scheduler list
-    taskStartSensors.enable();              //Enables the start sensors task
+    connect_wifi("BioEnergieLand", "10bioenergieland!7852");
+    //connect_wifi("Hood Lan","Ja17081994Yp08091992");
   }
-  void loop()
-  { //This function will continously be executed; everything which needs to be done recurringly is set here.
-    //unsigned long now = millis();
-    if (WiFi.status() != WL_CONNECTED)
-    {
-      connect_wifi("BioEnergieLand", "10bioenergieland!7852");
-      //connect_wifi("Hood Lan","Ja17081994Yp08091992");
-    }
-    /*if (!cmdclient.connected())
+  /*if (!cmdclient.connected())
   {
     cmdclient.connect(clientID);
   }*/
-    tskscheduler.execute();
-    client.loop();
-    // cmdclient.loop();
-  }
-  /*
+  tskscheduler.execute();
+  client.loop();
+  // cmdclient.loop();
+}
+/*
 void measure_soil()
 {
   //# the approximate moisture levels for the sensor reading
