@@ -2,7 +2,7 @@
  This code was written/hacked together by Swen Schreiter and is the basis for the multifunctional environmental sensing device called S.E.E.D (Small Electronic Environmental Device).
 Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in a research environment.
  **/
-#define HWTYPE 1    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
+#define HWTYPE 0   // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
 #define TENTNO "C" //Number of research tent either A1/A2/B1/B2/C1/C2
 
 // Include the libraries we need
@@ -42,8 +42,9 @@ float dallas_temp_0, dallas_temp_1, dallas_temp_2; //Sets variable for the first
 String dallas_temp_0_string, dallas_temp_1_string, dallas_temp_2_string; //Variable needed for MQTT transmission of DS18B20 measurements
 // MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
-const char *mqtt_server = "192.168.178.50";                                                       //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-const char *mqtt_server_2 = "192.168.178.51";                                                     //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server = "192.168.178.50";   //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server_2 = "192.168.178.51"; //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+
 String mqtt_connection_topic = "aeroponic/" + String(TENTNO) + "/connection/" + String(clientID); //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/command";                          //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 String ec_command_topic = "aeroponic/" + String(TENTNO) + "/ec/command";                          //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
@@ -55,27 +56,31 @@ String temp_ds18b20_topic_3 = "aeroponic/" + String(TENTNO) + "/temperature/ds18
 #if HWTYPE == 0 //
 //#include <SPI.h>
 #include "Adafruit_BME280.h" //Adds library for the BME280 (Bosch) environmental sensor
-#include <Adafruit_BMP280.h> //Adds library to use BMP280 sensors
+//#include <Adafruit_BMP280.h> //Adds library to use BMP280 sensors
 #include "Adafruit_Sensor.h" //Adds library for all Adafruit sensors to make them usable
-#include <HTU21D.h>          //For the SHT21 sensor
+//#include <HTU21D.h>          //For the dht sensor
+#include "DHT.h"
+
 #define TCAADDR 0x70
 
 //Functions stubs so VSCode doesn't complain
 void read_bme280();
-void read_sht21();
+void read_dht();
 void read_ds18b20();
 //void read_soilmoisture();
 
 Task taskBME280(TASK_SECOND * 30, TASK_FOREVER, &read_bme280);
-Task taskSHT21(TASK_SECOND * 30, TASK_FOREVER, &read_sht21);
+Task taskdht(TASK_SECOND * 30, TASK_FOREVER, &read_dht);
 ////Task taskSoilMoisture(TASK_MINUTE * 10, TASK_FOREVER, &read_soilmoisture);
 
-Adafruit_BME280 bme;                  // Create BME280 instance for the first sensor
-HTU21D sht21; //Initializes the SHT21
+Adafruit_BME280 bme; // Create BME280 instance for the first sensor
+DHT dht(D5, 22);
+DHT dht2(D6, 22);
+//HTU21D dht; //Initializes the dht
 //Adafruit_BMP280 bmp; // I2C
 //Initialization of all environmental variables as global to share them between functions
 float bme280_temp, bme280_humidity, bme280_pressure, bme280_altitude; //Sets the altitutde variable bme_altitutde to zero
-float sht21_temp, sht21_humidity ;                                   //Sets the altitutde variable bme_altitutde to zero
+float dht_temp, dht_humidity;                                         //Sets the altitutde variable bme_altitutde to zero
 //float bmp280_temp, bmp280_humidity, bmp280_pressure, bmp280_altitude; //Sets the altitutde variable bme_altitutde to zero
 
 String temp_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/bme280/sensor1";  //Adds MQTT topic for the sensor readings of the aero-grow-tables
@@ -247,7 +252,8 @@ void startSensors()
   taskDS18B20.enable();
 
 #if HWTYPE == 0
-  Serial.print(" Starting BME280/BMP280: ");
+  Serial.print("HWTYPE is 0, BME280, DHT22 and DS18B20 sensors need to be started!");
+  Serial.print(" Starting BME280: ");
   //Each BME280 needs to be initialized individually. For this a for-loop with TCA select is necessary.
   for (uint16_t i = 1; i < 2; i++)
   {
@@ -260,21 +266,20 @@ void startSensors()
       //while (1)
       //delay(10);
     }
-    if(!sht21.begin(D2, D1))
-    {
-      Serial.print(F("Could not find SHT21 sensor, check wiring! Of line: "));
-      Serial.println(i);
-    }
-
-    Serial.print("HWTYPE is 0, BME280 and DS18B20 sensors need to be started!");
-    if (taskStartSensors.isFirstIteration())
-    {
-      tskscheduler.addTask(taskBME280);
-      taskBME280.enable();
-      tskscheduler.addTask(taskSHT21);
-      taskSHT21.enable();
-    }
   }
+  if (taskStartSensors.isFirstIteration())
+  {
+    tskscheduler.addTask(taskBME280);
+    taskBME280.enable();
+
+    dht.begin();
+    dht2.begin();
+    tskscheduler.addTask(taskdht);
+    taskdht.enable();
+  }
+  
+  
+
 #else
   Serial.print("HWTYPE is 1, pH & EC sensors need to be started!");
   if (taskStartSensors.isFirstIteration())
@@ -398,32 +403,53 @@ void read_bme280()
   send_data_MQTT(String(bme280_humidity), String(humidty_topic_2), mqtt_server_2);
   send_data_MQTT(String(bme280_pressure), String(pressure_topic_2), mqtt_server_2);
 }
-void measure_sht21(int tca_bus)
+void measure_dht(int data_pin)
 {
-  tca_bus_select(tca_bus);
-  sht21_temp = sht21.readTemperature(); //Sets the variable temp to the temp measure of the BME280
-  Serial.print("Temperature of SHT21: ");
-  Serial.println(sht21_temp);
-  Serial.print("Humidity of SHT21: ");
-  sht21_humidity = sht21.readHumidity(); //Sets variable bme_humidity to humidity measure of BME280
-  Serial.println(sht21_humidity);
-  //float bme280_altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+  switch (data_pin)
+  {
+  case 5:
+    dht_temp = dht.readTemperature(); //Sets the variable temp to the temp measure of the BME280
+    Serial.print("Temperature of dht: ");
+    Serial.println(dht_temp);
+    Serial.print("Humidity of dht: ");
+    dht_humidity = dht.readHumidity(); //Sets variable bme_humidity to humidity measure of BME280
+    Serial.println(dht_humidity);
+    break;
+
+  case 6:
+    dht_temp = dht2.readTemperature(); //Sets the variable temp to the temp measure of the BME280
+    Serial.print("Temperature of dht: ");
+    Serial.println(dht_temp);
+    Serial.print("Humidity of dht: ");
+    dht_humidity = dht2.readHumidity(); //Sets variable bme_humidity to humidity measure of BME280
+    Serial.println(dht_humidity);
+    break;
+
+  default:
+    Serial.print("Could not read any DHT22! ");
+    break;
+  }
+  if (isnan(dht_temp) || isnan(dht_humidity))
+  {
+    Serial.println(F("Failed to read from DHT sensor!"));
+    return;
+  }
 }
-void read_sht21()
+void read_dht()
 {
-  measure_sht21(1); //First revision B2 uses TCA 1 and 3
-  send_data_MQTT(String(sht21_temp), String(temp_topic_1), mqtt_server);
-  send_data_MQTT(String(sht21_humidity), String(humidity_topic_1), mqtt_server);
+  measure_dht(5); //DHT input pin is either 5 or 6, corresponding to the first/second sensor.
+  send_data_MQTT(String(dht_temp), String(temp_topic_1), mqtt_server);
+  send_data_MQTT(String(dht_humidity), String(humidity_topic_1), mqtt_server);
 
-  send_data_MQTT(String(sht21_temp), String(temp_topic_1), mqtt_server_2);
-  send_data_MQTT(String(sht21_humidity), String(humidity_topic_1), mqtt_server_2);
+  send_data_MQTT(String(dht_temp), String(temp_topic_1), mqtt_server_2);
+  send_data_MQTT(String(dht_humidity), String(humidity_topic_1), mqtt_server_2);
 
-  measure_sht21(2); //First revision B2 uses TCA 1 to 3
-  send_data_MQTT(String(sht21_temp), temp_topic_2, mqtt_server);
-  send_data_MQTT(String(sht21_humidity), humidty_topic_2, mqtt_server);
+  measure_dht(6); //First revision B2 uses TCA 1 to 3
+  send_data_MQTT(String(dht_temp), temp_topic_2, mqtt_server);
+  send_data_MQTT(String(dht_humidity), humidty_topic_2, mqtt_server);
 
-  send_data_MQTT(String(sht21_temp), String(temp_topic_2), mqtt_server_2);
-  send_data_MQTT(String(sht21_humidity), String(humidty_topic_2), mqtt_server_2);
+  send_data_MQTT(String(dht_temp), String(temp_topic_2), mqtt_server_2);
+  send_data_MQTT(String(dht_humidity), String(humidty_topic_2), mqtt_server_2);
 }
 #else
 void read_PH()
@@ -503,13 +529,13 @@ void read_usonic()
   distance_measured = ((usonic_time / 2) / 29.1); // 29.1;           // Die Zeit in den Weg in Zentimeter umrechnen
   Serial.print(distance_measured);                // Den Weg in Zentimeter ausgeben
   Serial.println(" cm");                          //
-  //float fuellstand = (((PI * (400.0))));
-  float fuellstand = (56*37);
+  //float fuellstand = (((PI * (400.0)))); //Used for the barrels B1/B2
+  float fuellstand = (56 * 37); //Used for rectangular A and C tanks
   fuellstand = fuellstand * (distance_measured);
   fuellstand = fuellstand / 1000;
-  fuellstand = 78.736 - fuellstand;  //Maximum fuellstand for A1/A2 and C1/C2
-  Serial.print(fuellstand); // Den Weg in Zentimeter ausgeben
-  Serial.println(" l");     //
+  fuellstand = 78.736 - fuellstand; //Maximum fuellstand for A1/A2 and C1/C2
+  Serial.print(fuellstand);         // Den Weg in Zentimeter ausgeben
+  Serial.println(" l");             //
   if (fuellstand < 78.736)
   {
     send_data_MQTT(String(fuellstand), String(fuellstand_topic), mqtt_server);
