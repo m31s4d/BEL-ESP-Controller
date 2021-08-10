@@ -2,8 +2,8 @@
  This code was written/hacked together by Swen Schreiter and is the basis for the multifunctional environmental sensing device called S.E.E.D (Small Electronic Environmental Device).
 Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in a research environment.
  **/
-#define HWTYPE 0   // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
-#define TENTNO "C" //Number of research tent either A1/A2/B1/B2/C1/C2
+#define HWTYPE 0    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
+#define TENTNO "C1" //Number of research tent either A1/A2/B1/B2/C1/C2
 
 // Include the libraries we need
 #include "Arduino.h"
@@ -74,8 +74,8 @@ Task taskdht(TASK_SECOND * 30, TASK_FOREVER, &read_dht);
 ////Task taskSoilMoisture(TASK_MINUTE * 10, TASK_FOREVER, &read_soilmoisture);
 
 Adafruit_BME280 bme; // Create BME280 instance for the first sensor
-DHT dht(D5, 22);
-DHT dht2(D6, 22);
+DHT dht(D7, 22);
+DHT dht2(D8, 22);
 //HTU21D dht; //Initializes the dht
 //Adafruit_BMP280 bmp; // I2C
 //Initialization of all environmental variables as global to share them between functions
@@ -257,28 +257,29 @@ void startSensors()
   //Each BME280 needs to be initialized individually. For this a for-loop with TCA select is necessary.
   for (uint16_t i = 1; i < 2; i++)
   {
-    /* code */
+    
     tca_bus_select(i);
-    if (!bme.begin(0x76))
+    if (bme.begin(0x76))
     { //This changes the I2C address for the BME280 sensor to the correct one. The Adafruit library expects it to be 0x77 while it is 0x76 for AZ-Delivery articles. Each sensor has to be checked.
       Serial.print(F("Could not find BME280 or BMP280 sensor, check wiring! Of line: "));
       Serial.println(i);
+      //Only adds the task if it can start the sensor on line 1, this corresponds to it being available. Otherwise we send garbage data every cycle.
+      if (taskStartSensors.isFirstIteration() && i == 1)
+      {
+        tskscheduler.addTask(taskBME280);
+        taskBME280.enable();
+      }
       //while (1)
       //delay(10);
     }
   }
   if (taskStartSensors.isFirstIteration())
   {
-    tskscheduler.addTask(taskBME280);
-    taskBME280.enable();
-
     dht.begin();
     dht2.begin();
     tskscheduler.addTask(taskdht);
     taskdht.enable();
   }
-  
-  
 
 #else
   Serial.print("HWTYPE is 1, pH & EC sensors need to be started!");
