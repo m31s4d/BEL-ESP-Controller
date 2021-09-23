@@ -3,7 +3,7 @@
 Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in a research environment.
  **/
 #define HWTYPE 0    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
-#define TENTNO "C2" //Number of research tent either A1/A2/B1/B2/C1/C2
+#define TENTNO "C1" //Number of research tent either A1/A2/B1/B2/C1/C2
 
 // Include the libraries we need
 #include "Arduino.h"
@@ -43,7 +43,7 @@ String dallas_temp_0_string, dallas_temp_1_string, dallas_temp_2_string; //Varia
 // MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
 const char *mqtt_server = "192.168.178.50";   //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-const char *mqtt_server_2 = "192.168.178.51"; //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server_2 = "192.168.178.53"; //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 
 String mqtt_connection_topic = "aeroponic/" + String(TENTNO) + "/connection/" + String(clientID); //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/command";                          //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
@@ -74,8 +74,8 @@ Task taskdht(TASK_SECOND * 30, TASK_FOREVER, &read_dht);
 ////Task taskSoilMoisture(TASK_MINUTE * 10, TASK_FOREVER, &read_soilmoisture);
 
 Adafruit_BME280 bme; // Create BME280 instance for the first sensor
-DHT dht(D7, 22);
-DHT dht2(D8, 22);
+DHT dht(D7, 22); //D6 for C2, D7 for C1
+DHT dht2(D8, 22); //D7 for C2, D8 for C1
 //HTU21D dht; //Initializes the dht
 //Adafruit_BMP280 bmp; // I2C
 //Initialization of all environmental variables as global to share them between functions
@@ -419,9 +419,9 @@ void measure_dht(int data_pin)
 
   case 6:
     dht_temp = dht2.readTemperature(); //Sets the variable temp to the temp measure of the BME280
-    Serial.print("Temperature of dht: ");
+    Serial.print("Temperature of dht 2: ");
     Serial.println(dht_temp);
-    Serial.print("Humidity of dht: ");
+    Serial.print("Humidity of dht 2: ");
     dht_humidity = dht2.readHumidity(); //Sets variable bme_humidity to humidity measure of BME280
     Serial.println(dht_humidity);
     break;
