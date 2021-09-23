@@ -32,7 +32,7 @@ Task taskDS18B20(TASK_SECOND * 60, TASK_FOREVER, &read_ds18b20);
 //Initialization of the OneWire Bus und the temp sensor
 // GPIO where the DS18B20 is connected to D5 --> Important, D5 needs to be pulled-up to be able to read DS18B20
 int numDevices;                            // Number of temperature devices found (will be used to get and publish all readings)
-OneWire oneWire(D5);                       // Setup a oneWire instance to communicate with any OneWire devices for A1/A2/B1 == D5; B2 == D3
+OneWire oneWire(D3);                       // Setup a oneWire instance to communicate with any OneWire devices for A1/A2/B1 == D5; B2 == D3
 DallasTemperature dallassensors(&oneWire); // Pass our oneWire reference to Dallas Temperature sensor
 DeviceAddress tempDeviceAddress;           // We'll use this variable to store a found device address for the DS18B20
 
