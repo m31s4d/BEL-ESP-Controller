@@ -2,8 +2,8 @@
  This code was written/hacked together by Swen Schreiter and is the basis for the multifunctional environmental sensing device called S.E.E.D (Small Electronic Environmental Device).
 Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in a research environment.
  **/
-#define HWTYPE 1    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
-#define TENTNO "C" //Number of research tent either A1/A2/B1/B2/C1/C2
+#define HWTYPE 0    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
+#define TENTNO "C2" //Number of research tent either A1/A2/B1/B2/C1/C2
 
 // Include the libraries we need
 #include "Arduino.h"
@@ -74,8 +74,8 @@ Task taskdht(TASK_SECOND * 30, TASK_FOREVER, &read_dht);
 ////Task taskSoilMoisture(TASK_MINUTE * 10, TASK_FOREVER, &read_soilmoisture);
 
 Adafruit_BME280 bme; // Create BME280 instance for the first sensor
-DHT dht(D7, 22); //D6 for C2, D7 for C1
-DHT dht2(D8, 22); //D7 for C2, D8 for C1
+DHT dht(D5, 22); //D6 for C2, D7 for C1
+DHT dht2(D6, 22); //D7 for C2, D8 for C1
 //HTU21D dht; //Initializes the dht
 //Adafruit_BMP280 bmp; // I2C
 //Initialization of all environmental variables as global to share them between functions
