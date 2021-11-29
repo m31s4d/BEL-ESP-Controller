@@ -112,11 +112,11 @@ void read_ds18b20();
 void read_usonic();
 
 //Initialize task to read/parse EC & pH and print to OLED screen
-Task taskReadEC(TASK_MINUTE * 2, TASK_FOREVER, &read_EC);
-Task taskParseEC(TASK_SECOND * 121, TASK_FOREVER, &parse_EC);
-Task taskReadPH(TASK_SECOND * 130, TASK_FOREVER, &read_PH);
-Task taskParsePH(TASK_SECOND * 135, TASK_FOREVER, &parse_PH);
-Task taskReadUSonic(TASK_MINUTE * 5, TASK_FOREVER, &read_usonic);
+Task taskReadEC(TASK_SECOND * 90, TASK_FOREVER, &read_EC);
+Task taskParseEC(TASK_SECOND * 95, TASK_FOREVER, &parse_EC);
+Task taskReadPH(TASK_SECOND * 60, TASK_FOREVER, &read_PH);
+Task taskParsePH(TASK_SECOND * 65, TASK_FOREVER, &parse_PH);
+Task taskReadUSonic(TASK_MINUTE * 2, TASK_FOREVER, &read_usonic);
 //Task taskReadDSB(TASK_MINUTE, TASK_FOREVER, &read_ds18b20);
 
 //MQTT: Include the following topics to send data value correctly for pH and EC
