@@ -3,7 +3,7 @@
 Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in a research environment.
  **/
 #define HWTYPE 1    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
-#define TENTNO "B2" //Number of research tent either A1/A2/B1/B2/C1/C2
+#define TENTNO "B1" //Number of research tent either A1/A2/B1/B2/C1/C2
 
 // Include the libraries we need
 #include "Arduino.h"
@@ -43,7 +43,7 @@ String dallas_temp_0_string, dallas_temp_1_string, dallas_temp_2_string; //Varia
 // MQTT 1 & 2
 // These lines initialize the variables for PubSub to connect to the MQTT Broker 1 of the Aero-Table
 const char *mqtt_server = "192.168.178.50";   //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
-const char *mqtt_server_2 = "192.168.178.51"; //"A= 192.168.178.51, B1/2 = 192.168.178.52, C1/2 = 192.168.178.53;               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
+const char *mqtt_server_2 = "192.168.178.52"; //"A= 192.168.178.51, B1/2 = 192.168.178.52, C1/2 = 192.168.178.53;               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 
 String mqtt_connection_topic = "aeroponic/" + String(TENTNO) + "/connection/" + String(clientID); //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/command";                          //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
@@ -529,12 +529,13 @@ void read_usonic()
   usonic_time = pulseIn(echo, HIGH);              // Die Zeit messen bis die // Ultraschallwelle zurückkommt
   distance_measured = ((usonic_time / 2) / 29.1); // 29.1;           // Die Zeit in den Weg in Zentimeter umrechnen
   Serial.print(distance_measured);                // Den Weg in Zentimeter ausgeben
-  Serial.println(" cm");                          //
-  //float fuellstand = (((PI * (400.0)))); //Used for the barrels B1/B2
-  float fuellstand = (56 * 37); //Used for rectangular A and C tanks
+  Serial.println(" cm");                         //
+  float fuellstand = (((PI * (400.0)))); //Used for the barrels B1/B2
+  //float fuellstand = (56 * 37); //Used for rectangular A and C tanks
   fuellstand = fuellstand * (distance_measured);
   fuellstand = fuellstand / 1000;
   fuellstand = 78.736 - fuellstand; //Maximum fuellstand for A1/A2 and C1/C2
+
   Serial.print(fuellstand);         // Den Weg in Zentimeter ausgeben
   Serial.println(" l");             //
   if (fuellstand < 78.736)
