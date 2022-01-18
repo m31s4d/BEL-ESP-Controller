@@ -534,7 +534,7 @@ void read_usonic()
   //float fuellstand = (56 * 37); //Used for rectangular A and C tanks
   fuellstand = fuellstand * (distance_measured);
   fuellstand = fuellstand / 1000;
-  fuellstand = 78.736 - fuellstand; //Maximum fuellstand for A1/A2 and C1/C2
+  fuellstand = 66.6 /*78.736*/ - fuellstand; //Maximum fuellstand for A1/A2 and C1/C2(78.736 L) for B1/B2 == 66.6
 
   Serial.print(fuellstand);         // Den Weg in Zentimeter ausgeben
   Serial.println(" l");             //
@@ -553,7 +553,7 @@ void read_usonic()
 void setup()
 {
   Serial.begin(9600);                // Initialize the I2C bus (BH1750 library doesn't do this automatically)
-  Wire.begin();                      // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
+  Wire.begin(D2, D1);                      // On esp8266 you can select SCL and SDA pins using Wire.begin(D2, D1);
   client.setCallback(mqtt_callback); //Tells the pubsubclient which function to use in case of a callback
   //cmdclient.setCallback(mqtt_callback);
   tskscheduler.addTask(taskStartSensors); //Adds task to scheduler list
