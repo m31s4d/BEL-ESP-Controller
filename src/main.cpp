@@ -3,10 +3,10 @@
 Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Controller) or at the project blog (TBD). All functionality is released for non-commercial use in a research environment.
  **/
 #define HWTYPE 1    // HWTYPE stores which sensors are attached to it: 0=BME280, DS18B20, I2C Multiplexer, 1= pH & EC
-#define TENTNO "B1" //Number of research tent either A1/A2/B1/B2/C1/C2
+#define TENTNO "B1" //Number of research tent either A1/A2/B1/B2/C1/C2; needs to be changed to corresponding name for the µcontroller
 
 // Include the libraries we need
-#include "Arduino.h"
+#include "Arduino.h"           //Generall arduino library for core functionality
 #include "Wire.h"              //Adds library for the I2C bus on D1 (SCL) and D2(SCD) (both can be changed on the ESP8266 to the deisred GPIO pins)
 #include "ESP8266WiFi.h"       // Enables the ESP8266 to connect to the local network (via WiFi)
 #include "PubSubClient.h"      // Allows us to connect to, and publish to the MQTT broker
@@ -14,9 +14,11 @@ Project details can be found on GitHub (https://github.com/m31s4d/BEL-ESP-Contro
 #include "OneWire.h"           //Adds library needed to initialize and use the 1-Wire protocoll for DS18B20 sensors
 #include "DallasTemperature.h" //Adds the Dallas Temp library to use DS18B20 with the Wemos
 
+//Creates random client id for mqtt connection; unique for each µcontroller.
 String nameBuffer = "BEL-Ponic-" + String(ESP.getChipId(), HEX); //String(random(0xffff), HEX); // Create a random client ID to identify the controller in the network
 const char *clientID = nameBuffer.c_str();                       //Copies the string in the char array used by the mqtt library
 
+//Creation of functional objects used for external communication with monitoring system.
 WiFiClient wifiClient;                                   // Initialise the WiFi and MQTT Client objects
 PubSubClient client("192.168.178.50", 1883, wifiClient); // 1883 is the listener port for the Broker //PubSubClient client(espClient);
 //PubSubClient cmdclient("192.168.178.52", 1883, cmdClient);
@@ -30,7 +32,7 @@ Task taskStartSensors(TASK_SECOND, TASK_ONCE, &startSensors);
 Task taskDS18B20(TASK_SECOND * 60, TASK_FOREVER, &read_ds18b20);
 
 //Initialization of the OneWire Bus und the temp sensor
-// GPIO where the DS18B20 is connected to D5 --> Important, D5 needs to be pulled-up to be able to read DS18B20
+// GPIO where the DS18B20 is connected to D5 --> Important, D5 needs to be pulled-up with 4.7k Ohm resistor to be able to read DS18B20
 int numDevices;                            // Number of temperature devices found (will be used to get and publish all readings)
 OneWire oneWire(D5);                       // Setup a oneWire instance to communicate with any OneWire devices for A1/A2/B1 == D5; B2 == D3
 DallasTemperature dallassensors(&oneWire); // Pass our oneWire reference to Dallas Temperature sensor
@@ -45,6 +47,8 @@ String dallas_temp_0_string, dallas_temp_1_string, dallas_temp_2_string; //Varia
 const char *mqtt_server = "192.168.178.50";   //"192.168.0.111";               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 const char *mqtt_server_2 = "192.168.178.52"; //"A= 192.168.178.51, B1/2 = 192.168.178.52, C1/2 = 192.168.178.53;               //Here the IP address of the mqtt server needs to be added. HoodLan = 192.168.2.105
 
+
+//General topics used to communicate with MQTT broker; these can be changed according to new namign convention
 String mqtt_connection_topic = "aeroponic/" + String(TENTNO) + "/connection/" + String(clientID); //Adds MQTT topic to check whether the microcontroller is connected to the broker and check the timings
 String pH_command_topic = "aeroponic/" + String(TENTNO) + "/ph/command";                          //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 String ec_command_topic = "aeroponic/" + String(TENTNO) + "/ec/command";                          //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
@@ -53,7 +57,7 @@ String temp_ds18b20_topic_1 = "aeroponic/" + String(TENTNO) + "/temperature/ds18
 String temp_ds18b20_topic_2 = "aeroponic/" + String(TENTNO) + "/temperature/ds18b20/sensor2"; //Adds MQTT topic for the dallas senssor 2
 String temp_ds18b20_topic_3 = "aeroponic/" + String(TENTNO) + "/temperature/ds18b20/sensor3"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
 
-#if HWTYPE == 0 //
+#if HWTYPE == 0 //Depending on hardware type different sensor configurations are loaded.
 //#include <SPI.h>
 #include "Adafruit_BME280.h" //Adds library for the BME280 (Bosch) environmental sensor
 //#include <Adafruit_BMP280.h> //Adds library to use BMP280 sensors
@@ -114,15 +118,15 @@ void read_usonic();
 //Initialize task to read/parse EC & pH and print to OLED screen
 Task taskReadEC(TASK_SECOND * 90, TASK_FOREVER, &read_EC);
 Task taskParseEC(TASK_SECOND * 95, TASK_FOREVER, &parse_EC);
-Task taskReadPH(TASK_SECOND * 60, TASK_FOREVER, &read_PH);
-Task taskParsePH(TASK_SECOND * 65, TASK_FOREVER, &parse_PH);
+Task taskReadPH(TASK_SECOND * 120, TASK_FOREVER, &read_PH);
+Task taskParsePH(TASK_SECOND * 125, TASK_FOREVER, &parse_PH);
 Task taskReadUSonic(TASK_MINUTE * 2, TASK_FOREVER, &read_usonic);
 //Task taskReadDSB(TASK_MINUTE, TASK_FOREVER, &read_ds18b20);
 
 //MQTT: Include the following topics to send data value correctly for pH and EC
 String pH_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ph/sensor1"; //Adds MQTT topic for the AtlasScientific pH probe
 
-String ec_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ec/sensor1"; //Adds MQTT topic for the AtlasScientific pH probe
+String ec_ezo_topic_1 = "aeroponic/" + String(TENTNO) + "/ec/sensor1"; //Adds MQTT topic for the AtlasScientific EC probe
 
 String fuellstand_topic = "aeroponic/" + String(TENTNO) + "/solution_level";   //Adds MQTT topic to subscribe to command code for the EZO pH circuit. With this we will be able remotely calibrate and get readings from the microcontroller
 String solution_temp_topic = "aeroponic/" + String(TENTNO) + "/solution_temp"; //Adds MQTT topic for the dallas senssor 3 in the plant zone to measure air temp
@@ -575,19 +579,3 @@ void loop()
   client.loop();
   // cmdclient.loop();
 }
-/*
-void measure_soil()
-{
-  //# the approximate moisture levels for the sensor reading
-  //# 0 to 300 dry soil
-  //# 300 to 700 humid soil
-  //# 700 to 950 in water
-  pinMode(soilPin, OUTPUT);
-  digitalWrite(soilPin, HIGH);
-  double sensorValue = analogRead(sensorPin); // read the analog in value:
-  sensorValue = map(sensorValue, 1024, 0, 0, 100);
-  Serial.print("Moisture : ");
-  Serial.println(sensorValue); //Prints out the value of the soil sensor to check if it is wired correctly
-  soil_moisture = sensorValue;
-  Serial.println("%");
-}*/
